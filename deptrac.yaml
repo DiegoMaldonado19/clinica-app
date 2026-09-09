@@ -1,0 +1,73 @@
+# La regla de dependencia de ADR-002, hecha ejecutable.
+#
+#   Adaptadores  →  Aplicacion  →  Dominio
+#                                     ↑
+#                        (nunca al reves, jamas)
+#
+# Si una clase de src/*/Domain importa Illuminate\*, este archivo rompe la
+# construccion. Sin esta verificacion la disciplina se pierde en el tercer
+# sprint; con ella no hace falta discutirla en cada revision.
+deptrac:
+  paths:
+    - ./src
+    - ./app
+
+  layers:
+    - name: Framework
+      collectors:
+        - type: classLike
+          value: ^(Illuminate|Filament|Livewire|Laravel|Symfony|Carbon|Ramsey|League|Psr)\\.*
+
+    - name: Php
+      collectors:
+        - type: classLike
+          value: ^(Date(Time|Interval|Period)|Stringable|JsonSerializable|Countable|Traversable|Iterator|IteratorAggregate|ArrayAccess|ArrayObject|Closure|Generator|Throwable|Exception|Error|Random|Spl|Reflection|Attribute|Override|Sensitive|Deprecated|Number|BackedEnum|UnitEnum)[A-Za-z]*$
+        - type: classLike
+          value: ^[A-Za-z]*(Exception|Error)$
+
+    - name: Domain
+      collectors:
+        - type: directory
+          value: (^|/)src/[^/]+/Domain/.*
+
+    - name: Application
+      collectors:
+        - type: directory
+          value: (^|/)src/[^/]+/Application/.*
+
+    - name: Infrastructure
+      collectors:
+        - type: directory
+          value: (^|/)src/[^/]+/Infrastructure/.*
+
+    # app/ es la parte delgada de Laravel: providers, kernel, recursos de
+    # Filament. Puede depender de todo; nada puede depender de ella.
+    - name: Laravel
+      collectors:
+        - type: directory
+          value: (^|/)app/.*
+
+  ruleset:
+    # El dominio no sabe que existe Laravel. Solo PHP.
+    Domain:
+      - Php
+
+    Application:
+      - Domain
+      - Php
+
+    Infrastructure:
+      - Domain
+      - Application
+      - Framework
+      - Php
+
+    Laravel:
+      - Domain
+      - Application
+      - Infrastructure
+      - Framework
+      - Php
+
+    Framework: ~
+    Php: ~

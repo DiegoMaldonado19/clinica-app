@@ -5,10 +5,13 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
+/.claude/settings.local.json
 /.codex
 /.cursor/
+/.deptrac.cache
 /.idea
 /.nova
+/.phpstan.cache
 /.phpunit.cache
 /.vscode
 /.zed
@@ -21,7 +24,7 @@
 /storage/*.key
 /storage/pail
 /vendor
-_ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+_ide_helper.php

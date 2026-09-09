@@ -89,6 +89,8 @@ trabajos en curso, y poder escalar las colas de forma independiente en Fase 3.
 | `redis` | `redis:7-alpine` | ElastiCache | `6379` | sin token en local |
 | `minio` | `minio/minio` | Amazon S3 | `9000` API, `9001` consola | `minioadmin` / `minioadmin` |
 | `mailpit` | `axllent/mailpit` | Amazon SES | `1025` SMTP, `8025` interfaz | — |
+| `minio-init` | `minio/mc` | — | — | Crea el bucket privado y termina |
+| `vite` | `node:24-alpine` | — | `5173` | Recarga en caliente del front |
 
 **Levantar el proyecto completo no requiere ninguna cuenta en la nube.** Es la condición de que
 T-01 vaya en la primera fase: sin entorno reproducible, todo lo demás se retrasa.
@@ -104,7 +106,54 @@ conexiones y falla de forma intermitente — el peor tipo de fallo, porque a vec
 | `mariadb` | `healthcheck.sh --connect --innodb_initialized` |
 | `redis` | `redis-cli ping` |
 | `minio` | `mc ready local` |
-| `nginx` | `curl -fsS http://localhost:8080/up` |
+| `mailpit` | `/mailpit readyz` |
+| `web` | `wget -qO- http://127.0.0.1:8080/up` |
+
+**El health check usa `127.0.0.1`, no `localhost`.** Dentro del contenedor `localhost` resuelve
+primero a `::1` y nginx solo escucha en IPv4: con `localhost` el servicio se marca
+permanentemente enfermo aunque responda perfectamente desde fuera. El mismo cuidado aplica al
+`curl` de verificación del despliegue rolling en Fase 3.
+
+### 3.4 Recarga en caliente, y por qué la imagen de producción no la tiene
+
+Un solo `docker/php/Dockerfile` con dos destinos. Lo que cambia entre ellos es exactamente lo
+que debe cambiar y nada más:
+
+| | `--target dev` | `--target prod` |
+|---|---|---|
+| Código | Bind mount del proyecto | **Copiado dentro de la imagen** |
+| `opcache.validate_timestamps` | **`1`** con `revalidate_freq=0` | **`0`** |
+| Dependencias | Con las de desarrollo | `--no-dev`, autoload de mapa de clases autoritativo |
+| Assets del front | Servidor de Vite en el puerto 5173 | `public/build` construido en la etapa `assets` |
+| Composer | Presente | **Eliminado de la imagen** |
+| Usuario | `www-data` remapeado al uid del anfitrión | `www-data` (82) |
+
+**La recarga en caliente de PHP es una sola línea de configuración.** Con
+`opcache.validate_timestamps=1` y `revalidate_freq=0`, PHP comprueba la fecha de modificación
+del fichero en cada petición: editar un `.php` surte efecto en la siguiente, sin reconstruir la
+imagen y sin reiniciar el contenedor. En producción esa comprobación se apaga, porque el código
+no cambia bajo los pies del proceso y revalidar en cada petición solo cuesta llamadas al
+sistema.
+
+**El front lo recarga Vite.** El servicio `vite` escribe `public/hot`, y el `@vite` de Blade
+apunta al servidor de desarrollo mientras ese fichero exista. En producción no existe, y Blade
+lee el manifiesto de `public/build`.
+
+Dos detalles que hacen falta en este entorno concreto y no son adorno:
+
+- **`usePolling: true` en `vite.config.js`.** El bind mount de WSL2 no propaga eventos inotify
+  al contenedor; sin sondeo, Vite no ve los cambios y la recarga del front no ocurre.
+- **`www-data` remapeado al uid del anfitrión, y el servicio `vite` corriendo con ese mismo
+  uid.** Sin esto, `storage/`, `node_modules/` y `public/hot` quedan a nombre de `root` en el
+  anfitrión y hacen falta permisos de superusuario para borrarlos.
+
+**La imagen que sube al registro es la de `prod`, y no puede recargar en caliente.** Es
+deliberado: una imagen que lee el código de un volumen externo no es reproducible, y ADR-016
+exige que lo desplegado sea exactamente el artefacto que pasó por pruebas.
+
+El servicio `web` de producción se construye desde el mismo Dockerfile (etapa `web`) y copia
+`public/` desde la etapa `prod`, de modo que **nginx y la aplicación nunca sirven versiones
+distintas de los assets**.
 
 ---
 
@@ -371,7 +420,7 @@ CACHE_STORE=null vendor/bin/pest --filter=Critical  # degradacion sin cache
 
 Antes de dar por terminada la infraestructura de la Fase 2:
 
-- [ ] `docker compose up -d` levanta los ocho servicios y todos reportan sano.
+- [ ] `docker compose up -d` levanta los nueve servicios y todos reportan sano.
 - [ ] `migrate --seed` corre dos veces seguidas **sin duplicar filas de catálogo**.
 - [ ] La suite completa pasa en un entorno recién clonado, sin pasos manuales adicionales.
 - [ ] **Un PR con una violación deliberada de la regla de dependencia es rechazado** (CA-24).

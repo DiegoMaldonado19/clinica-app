@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: secret
+          MARIADB_DATABASE: clinica_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: clinica_test
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, redis, gd, intl, zip, bcmath
+          coverage: none
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Formato (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Analisis estatico (Larastan)
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      # La regla de dependencia hexagonal. Si el dominio importa el framework,
+      # este paso rompe la construccion (ADR-002, CA-24).
+      - name: Regla de arquitectura (Deptrac)
+        run: vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
+
+      - name: Pruebas unitarias del dominio (sin base de datos)
+        run: vendor/bin/pest --testsuite=Unit
+
+      - name: Pruebas de integracion y funcionales
+        run: |
+          php artisan migrate --force
+          vendor/bin/pest --testsuite=Integration,Feature
+
+      # El sistema debe seguir funcionando sin cache (ADR-008). Si algo
+      # imprescindible vive solo en Redis, este paso lo revela.
+      - name: Prueba de degradacion sin cache
+        env:
+          CACHE_STORE: 'null'
+        run: vendor/bin/pest --testsuite=Feature
+
+      - name: Dependencias con vulnerabilidades conocidas
+        run: composer audit
+
+      - name: Escaneo de secretos
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Se construye para verificar que construye. NO se publica (ADR-016).
+      - name: Construir imagen de produccion (sin publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          target: prod
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

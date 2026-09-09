@@ -5,9 +5,15 @@
          colors="true"
 >
     <testsuites>
+        <!-- Dominio puro. Sin base de datos, sin framework. Milisegundos. -->
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
         </testsuite>
+        <!-- Adaptadores contra MariaDB y Redis reales. -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <!-- Flujos completos por HTTP. -->
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
@@ -15,6 +21,7 @@
     <source>
         <include>
             <directory>app</directory>
+            <directory>src</directory>
         </include>
     </source>
     <php>

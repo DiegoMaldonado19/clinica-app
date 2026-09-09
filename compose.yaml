@@ -1,0 +1,48 @@
+# Forma de produccion: la imagen lleva el codigo dentro y no hay recarga en
+# caliente. `docker compose up` en local fusiona compose.override.yaml encima
+# y cambia el destino de construccion a `dev`; para levantar la forma real:
+#
+#     docker compose -f compose.yaml up
+#
+name: clinica
+
+x-app: &app
+  image: ${APP_IMAGE:-clinica-app}:${IMAGE_TAG:-local}
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: prod
+  env_file: [.env]
+  restart: unless-stopped
+
+services:
+  web:
+    image: ${APP_IMAGE:-clinica-app}-web:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on: [app]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    <<: *app
+
+  # Contenedor aparte del web a proposito: un despliegue no debe matar un
+  # trabajo a medio ejecutar, y las colas se escalan por su cuenta.
+  worker:
+    <<: *app
+    command: php artisan queue:work --queue=critical,mail,documents,default --tries=3 --max-time=3600
+
+  # Con dos instancias, cada tarea se envuelve en withoutOverlapping() sobre el
+  # bloqueo `database`: solo una gana el tick (doc 03 §2.3).
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
