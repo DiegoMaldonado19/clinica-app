@@ -55,7 +55,7 @@ vendor/bin/pest
 ## Entorno
 
 ```bash
-docker compose up -d                                    # 9 servicios
+docker compose up -d                                    # 10 servicios
 docker compose exec app php artisan migrate --seed
 ```
 

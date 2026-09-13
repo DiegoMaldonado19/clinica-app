@@ -65,7 +65,7 @@ Nunca se recorta de F-01 a F-09.
 **Alcance**
 
 - `docker/php/Dockerfile` (`php:8.4-fpm-alpine` con `pdo_mysql`, `redis`, `gd`, `intl`, `zip`,
-  `bcmath`), `docker/nginx/default.conf`, `docker/entrypoint.sh`.
+  `bcmath`), `docker/nginx/default.conf`.
 - `compose.yaml` con `nginx`, `app`, `worker`, `scheduler`; `compose.override.yaml` con
   `mariadb`, `redis`, `minio`, `mailpit`.
 - `src/` con los siete contextos y `Shared`, según la estructura de paquetes del doc 02 §4.
@@ -76,12 +76,12 @@ Nunca se recorta de F-01 a F-09.
 - Pint, Larastan, Pest configurados con las suites `Unit`, `Integration`, `Feature`.
 - `.github/workflows/ci.yml` completo (doc 04 §3.1).
 - `CLAUDE.md`, `.claude/agents/` (3 subagentes), `.claude/commands/`, `.claude/settings.json`
-  con los 3 hooks del doc 12 §2.3.
+  con los 2 hooks del doc 12 §2.3.
 
 **Verificación**
 
 ```bash
-docker compose up -d && docker compose ps          # 8 servicios sanos
+docker compose up -d && docker compose ps          # 10 servicios
 vendor/bin/deptrac analyse --fail-on-uncovered     # sin violaciones sobre src/ vacio
 vendor/bin/pest                                    # la suite arranca
 ```

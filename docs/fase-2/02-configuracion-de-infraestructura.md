@@ -236,7 +236,8 @@ que en Fase 3 no haya que separarlas sobre datos ya cifrados.
 
 ### 5.1 Por qué MariaDB en local y no SQLite
 
-El esqueleto venía con SQLite. Se sustituye en F-01, y no es una preferencia:
+El esqueleto venía con SQLite. Se sustituye en F-02 —donde empieza a doler, con las primeras
+migraciones reales—, y no es una preferencia:
 
 | Necesidad | SQLite | MariaDB 11.4 |
 |---|---|---|
@@ -420,7 +421,8 @@ CACHE_STORE=null vendor/bin/pest --filter=Critical  # degradacion sin cache
 
 Antes de dar por terminada la infraestructura de la Fase 2:
 
-- [ ] `docker compose up -d` levanta los nueve servicios y todos reportan sano.
+- [ ] `docker compose up -d` levanta los diez servicios; los ocho de larga duración reportan
+      sano y `minio-init` termina en 0.
 - [ ] `migrate --seed` corre dos veces seguidas **sin duplicar filas de catálogo**.
 - [ ] La suite completa pasa en un entorno recién clonado, sin pasos manuales adicionales.
 - [ ] **Un PR con una violación deliberada de la regla de dependencia es rechazado** (CA-24).

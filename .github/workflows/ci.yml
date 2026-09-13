@@ -36,7 +36,9 @@ jobs:
       REDIS_PORT: 6379
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0        # gitleaks necesita el historial para resolver BASE^..HEAD
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -82,7 +84,7 @@ jobs:
         run: composer audit
 
       - name: Escaneo de secretos
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
