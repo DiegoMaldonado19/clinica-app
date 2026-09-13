@@ -24,20 +24,30 @@
             <directory>src</directory>
         </include>
     </source>
+    <!--
+     | `server` y no `env`: el contenedor inyecta estas mismas variables desde
+     | `.env` hacia $_SERVER, que Laravel lee antes que $_ENV. Con <env> ninguna
+     | linea de este bloque surtia efecto dentro de Docker y la suite corria
+     | como APP_ENV=local contra el Redis y el SMTP de desarrollo.
+     -->
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
+        <server name="APP_ENV" value="testing"/>
+        <server name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <server name="BCRYPT_ROUNDS" value="4"/>
+        <server name="BROADCAST_CONNECTION" value="null"/>
+        <!-- Unica excepcion: la tuberia corre la suite con CACHE_STORE=null para
+             verificar ADR-008, y forzarlo aqui anularia esa verificacion. -->
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="PULSE_ENABLED" value="false"/>
-        <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <server name="CACHE_PREFIX" value="clinica-test-"/>
+        <!-- Base de Redis propia: la suite vacia la cache al arrancar cada
+             prueba y no debe poder tocar la de desarrollo. -->
+        <server name="REDIS_CACHE_DB" value="15"/>
+        <server name="DB_DATABASE" value="clinica_test"/>
+        <server name="MAIL_MAILER" value="array"/>
+        <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="SESSION_DRIVER" value="array"/>
+        <server name="PULSE_ENABLED" value="false"/>
+        <server name="TELESCOPE_ENABLED" value="false"/>
+        <server name="NIGHTWATCH_ENABLED" value="false"/>
     </php>
 </phpunit>
