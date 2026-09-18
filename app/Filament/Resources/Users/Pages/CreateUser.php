@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Shared\Infrastructure\Audit\AuditLog;
 use App\Support\BusinessRuleSettings;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -25,5 +26,10 @@ class CreateUser extends CreateRecord
         $data['temp_password_expires_at'] = now()->addHours((int) $hours);
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        AuditLog::record('user.created', 'user', (string) $this->record->getKey(), ['role_id' => $this->record->getAttribute('role_id')]);
     }
 }

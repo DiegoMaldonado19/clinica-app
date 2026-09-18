@@ -80,6 +80,7 @@ class CatalogSeeder extends Seeder
             ['code' => 'APROBADO',    'label' => 'Aprobado'],
             ['code' => 'RECHAZADO',   'label' => 'Rechazado'],
             ['code' => 'EN_CAJA',     'label' => 'En caja'],
+            ['code' => 'EXONERADO',   'label' => 'Exonerado'],
         ]);
 
         $this->seed('payment_methods', [

@@ -1,6 +1,6 @@
 # 03 — Requisitos que debe cumplir la Fase 2
 
-> **Documento 3 de 3** · Fase 2 · Audiencia: equipo, cliente y evaluación
+> **Documento 3 de 5** · Fase 2 · Audiencia: equipo, cliente y evaluación
 > Cruza el §8.1 y el §6 del enunciado contra el alcance que definimos en
 > `Entregable_1_Final/` y `Entregable_2_Final/`, y dice para cada punto **dónde queda**.
 
@@ -31,13 +31,13 @@ El enunciado enumera cuatro. Se desglosan y se les asigna fase del documento 01.
 
 | Qué | Estado | Fase | Referencia |
 |---|---|---|---|
-| Landing pública con perfil, servicios, tarifas y FAQ | 🔨 | F-06 | doc 10 §1.2 · mockups `L-01`, `L-02`, `L-03` |
-| Wizard público de agendamiento en tres pasos | 🔨 | F-06 | mockups `A-01` → `A-04` |
-| Portal del paciente: mis citas, mi pago | 🔨 | F-08, F-09 | mockups `P-01`, `P-02` |
-| Panel administrativo Filament | 🔨 | F-03, F-07, F-08, F-10 | mockups `D-02`, `D-03`, `D-04` |
-| Backend complejo: agregado con 13 estados y sus transiciones | 🔨 | F-05 | doc 08 §1 |
-| Backend complejo: bloqueo de slot bajo concurrencia | 🔨 | F-06 | RN-04 |
-| Backend complejo: trabajos diferidos con verificación de estado | 🔨 | F-07, F-09 | doc 02 §8.1 |
+| Landing pública con perfil, servicios, tarifas y FAQ | ✅ | F-06 | doc 10 §1.2 · mockups `L-01`, `L-02`, `L-03` |
+| Wizard público de agendamiento en tres pasos | ✅ | F-06 | mockups `A-01` → `A-04` |
+| Portal del paciente: mis citas, mi pago | ✅ | F-08, F-09 | mockups `P-01`, `P-02` |
+| Panel administrativo Filament | ✅ | F-03, F-07, F-08, F-10 | mockups `D-02`, `D-03`, `D-04` |
+| Backend complejo: agregado con 13 estados y sus transiciones | ✅ | F-05 | doc 08 §1 |
+| Backend complejo: bloqueo de slot bajo concurrencia | ✅ | F-06 | RN-04 |
+| Backend complejo: trabajos diferidos con verificación de estado | ✅ | F-07, F-09 | doc 02 §8.1 |
 
 **Lo que hace «complejo» a este backend no es el volumen: son los plazos y la concurrencia.**
 Un sistema de 87 sesiones al mes no tiene problema de escala; tiene una máquina de estados con
@@ -50,11 +50,11 @@ personas pueden pedir en el mismo milisegundo.
 |---|---|---|---|
 | Modelo entidad-relación diseñado | ✅ | — | doc 06 §1 |
 | Diccionario de datos y justificación de la normalización a 3FN | ✅ | — | doc 06 §3 y §4 |
-| Migraciones versionadas en el repositorio | 🔨 | F-02, F-03, F-05, F-08, F-10 | doc 06 §7 |
-| Semillas idempotentes de los 12 catálogos | 🔨 | F-02 | doc 06 §2 |
-| Reglas RN-01…RN-20 como parámetros en base, no constantes | 🔨 | F-02 | `business_rule_settings`, doc 06 §3.10 |
+| Migraciones versionadas en el repositorio | ✅ | F-02, F-03, F-05, F-08, F-10 | doc 06 §7 |
+| Semillas idempotentes de los 12 catálogos | ✅ | F-02 | doc 06 §2 |
+| Reglas RN-01…RN-20 como parámetros en base, no constantes | ✅ | F-02 | `business_rule_settings`, doc 06 §3.10 |
 | Migraciones ejecutadas de forma automatizada por la tubería | ⏭️ | Fase 3 | doc 04 §3.3, fase 1 del despliegue |
-| Patrón expandir/contraer aplicado | 🔨 | desde F-02 | doc 04 §5.2 |
+| Patrón expandir/contraer aplicado | ✅ | desde F-02 | doc 04 §5.2 |
 
 El enunciado exige en §5.2 «un sistema de control de versiones para el esquema (ej. Flyway,
 Liquibase, Sequelize Migrations, Alembic)». **El equivalente en este stack son las migraciones
@@ -66,17 +66,17 @@ despliegue, que requiere la infraestructura.
 
 | Qué | Estado | Fase | Referencia |
 |---|---|---|---|
-| Registro de paciente (alta automática con credencial temporal) | 🔨 | F-06 | RF-06, RN-15 |
-| Login con sesiones seguras | 🔨 | F-03 | doc 05 §3.3 |
-| Recuperación de contraseña por correo | 🔨 | F-03 | doc 05 §3.2 |
-| Cambio obligatorio de contraseña temporal | 🔨 | F-03 | RN-15 |
-| Tres roles: administradora, recepción, paciente | 🔨 | F-03 | doc 05 §4.2 |
-| 32 permisos atómicos con políticas por agregado | 🔨 | F-03 | doc 05 §4.2 |
-| CRUD completo de `Appointment` (entidad principal) | 🔨 | F-05 → F-09 | doc 08 §1 |
-| CRUD de pacientes, servicios, pagos y reglas de negocio | 🔨 | F-03, F-08 | Filament |
-| Motor de notificaciones con idempotencia y reintentos | 🔨 | F-04 | doc 02 §2.2 |
-| Notificación por correo en procesos críticos | 🔨 | F-04 | ADR-017 |
-| **Un proceso complejo identificado finalizado** | 🔨 | **F-05 → F-09** | ver §2.3.1 |
+| Registro de paciente (alta automática con credencial temporal) | ✅ | F-06 | RF-06, RN-15 |
+| Login con sesiones seguras | ✅ | F-03 | doc 05 §3.3 |
+| Recuperación de contraseña por correo | ✅ | F-03 | doc 05 §3.2 |
+| Cambio obligatorio de contraseña temporal | ✅ | F-03 | RN-15 |
+| Tres roles: administradora, recepción, paciente | ✅ | F-03 | doc 05 §4.2 |
+| 32 permisos atómicos con políticas por agregado | ✅ | F-03 | doc 05 §4.2 |
+| CRUD completo de `Appointment` (entidad principal) | ✅ | F-05 → F-09 | doc 08 §1 |
+| CRUD de pacientes, servicios, pagos y reglas de negocio | ✅ | F-03, F-08 | Filament |
+| Motor de notificaciones con idempotencia y reintentos | ✅ | F-04 | doc 02 §2.2 |
+| Notificación por correo en procesos críticos | ✅ | F-04 | ADR-017 |
+| **Un proceso complejo identificado finalizado** | ✅ | **F-05 → F-09** | ver §2.3.1 |
 
 #### 2.3.1 El proceso complejo elegido
 
@@ -115,11 +115,11 @@ SOLICITADA ──aprobar──► CONFIRMADA_PENDIENTE_PAGO ──comprobante─
 | Qué | Estado | Fase | Referencia |
 |---|---|---|---|
 | Política de uso: dónde sí, dónde no | ✅ | — | doc 12 §3 · `Entregable_1_Final/08` §4 |
-| `CLAUDE.md` con las instrucciones permanentes | 🔨 | F-01 | doc 12 §2.1 |
-| Tres subagentes de alcance acotado | 🔨 | F-01 | doc 12 §2.2 |
-| Hooks que ejecutan Deptrac y Pint automáticamente | 🔨 | F-01 | doc 12 §2.3 |
-| Hook que bloquea `migrate:fresh` fuera de local | 🔨 | F-01 | doc 12 §2.3 |
-| Trazabilidad del uso en commits y PRs | 🔨 | desde F-01 | doc 12 §5 |
+| `CLAUDE.md` con las instrucciones permanentes | ✅ | F-01 | doc 12 §2.1 |
+| Tres subagentes de alcance acotado | ✅ | F-01 | doc 12 §2.2 |
+| Hooks que ejecutan Deptrac y Pint automáticamente | ✅ | F-01 | doc 12 §2.3 |
+| Hook que bloquea `migrate:fresh` fuera de local | ✅ | F-01 | doc 12 §2.3 |
+| Trazabilidad del uso en commits y PRs | ✅ | desde F-01 | doc 12 §5 |
 
 **Este requisito tira en dirección contraria al §8.3 del enunciado**, que penaliza hasta con el
 100 % de la nota el desconocimiento del propio código. El ambiente está diseñado para cumplir
@@ -139,14 +139,14 @@ fusiona.**
 | Historias de usuario | ✅ | `Entregable_2_Final/07` §3, con Gherkin | Verificar trazabilidad al cerrar cada fase |
 | Documentación técnica | ✅ | `Entregable_2_Final/01`–`13` | — |
 | Diagramas de clases | ✅ | `Entregable_2_Final/08`, 7 contextos | Contrastar contra `src/` al cerrar F-05 y F-10 |
-| **Infraestructura finalizada** | 🔨 | **`docs/fase-2/02`** | Compose local operativo + CI; AWS a Fase 3 |
+| **Infraestructura finalizada** | ✅ | **`docs/fase-2/02`** §9 | Compose local operativo y verificado + CI; AWS a Fase 3 |
 | Diagrama de la arquitectura | ✅ | `Entregable_2_Final/02` §1 | — |
 | Modelo entidad-relación | ✅ | `Entregable_2_Final/06` §1 | — |
 | Estructura de paqueterías | ✅ | `Entregable_2_Final/02` §4 | **Materializarla en `src/`** (F-01) |
 | Modelos de procesos técnicos completos | ✅ | `Entregable_2_Final/09`, 12 secuencias | — |
 | Historias de usuario y casos de uso finalizadas | ✅ | `Entregable_2_Final/07` · `Entregable_1_Final/10` | — |
-| **Documentación de usuario** | 🔨 | **F-12** | Diferida a Fase 2 en el README §7; vence ahora |
-| **Manual de usuario** | 🔨 | **F-12** | MU-01…MU-17, doc 11 §5 |
+| **Documentación de usuario** | ✅ | **`docs/fase-2/05`** | Por perfil: qué ve y qué puede hacer cada uno |
+| **Manual de usuario** | ✅ | **`docs/fase-2/04`** | Trece secciones MU; las cuatro restantes, declaradas para Fase 3 |
 | Secuencia de pantallas | ✅ | `Entregable_2_Final/10` §4 · mockups §6 | — |
 
 **De doce documentos exigidos, nueve ya están entregados.** El trabajo documental real de esta
@@ -302,3 +302,55 @@ declarada es una decisión; una omisión callada es un descuido.
 —doce semanas de la estimación original— en doce días. Lo que lo hace viable es que el diseño
 ya está decidido y escrito: no hay que pensar la arquitectura mientras se programa, solo
 ejecutarla.
+
+---
+
+## 9. Cierre de la fase — 18 de septiembre
+
+F-01 a F-12 construidas, sin recorte. El proceso complejo `to-be-01` → `to-be-02` →
+`to-be-03/03b` → `to-be-04` corre de principio a fin en los contenedores locales: agendar,
+aprobar, pagar, conciliar, registrar la llegada y sellar la nota. Los correos NT llegan a
+Mailpit por la cola `database`.
+
+### 9.1 Evidencia por criterio de aceptación
+
+| # | Criterio | Evidencia |
+|---|---|---|
+| CA-01 | Agendar desde la landing sin ayuda | `BookingWizardTest`: recorrido A-01 → A-04 |
+| CA-03 | La pre-cita sin respuesta expira y libera el horario | `SlaTest`, `BookingTest` (el horario vuelve a reservarse) |
+| CA-04 | Sin pago aprobado en T-3 h, se cancela | `CancellationTest` (también con el comprobante en revisión) |
+| CA-05 | El tramo correcto de RN-06 | Los siete casos frontera en `TieredCancellationPolicyTest`, sin base de datos |
+| CA-06 | Inasistencia: 100 % sin liberar el horario | `CancellationTest` |
+| CA-07 | Una nota sellada no se edita por ninguna vía | `ClinicalRecordTest`, y `UPDATE`/`DELETE` por SQL directo sobre la base de desarrollo |
+| CA-08 | Recepción no lee notas clínicas | `ClinicalRecordTest`: 403 **y** registro en bitácora |
+| CA-11 | Recuperación de contraseña | `AuthTest` (F-03) |
+| CA-12 | Todo acceso al expediente queda en bitácora | `ClinicalRecordTest`: dos lecturas, dos registros |
+| CA-14 | Cambiar el SLA afecta solo a citas nuevas | `SlaTest` |
+| CA-15 | Calendario < 500 ms | Mes completo medido con `curl`: 61 ms con la caché vacía, ~36 ms con caché |
+| CA-17 | Agenda semanal ≤ 8 consultas | `AdminPanelTest` |
+| CA-20 | Comprobantes no públicos | `curl` anónimo → 403 |
+| CA-24 | Violación de la regla de dependencia rechazada | Deptrac con clase deliberada |
+| CA-32 | Sin caché no se pierde nada | Suite `Feature` con `CACHE_STORE=null` |
+
+### 9.2 Decisiones tomadas al construir
+
+El diseño tenía cinco huecos que solo aparecieron al programarlo. Se resolvieron así, y se
+declaran aquí para que el diseño y el código digan lo mismo.
+
+| Tema | Diseño | Implementación | Por qué |
+|---|---|---|---|
+| Doble reserva | `UNIQUE(therapist_id, starts_at)` | `UNIQUE(therapist_id, starts_at, active_slot)`, con `active_slot` en 1 o NULL | Con el índice original, un horario expirado o cancelado no se podría volver a reservar nunca |
+| `slot_holds` | Tabla aparte | No se crea: la fila `SOLICITADA` **es** el HOLD, protegida por candado e índice único | Sin tabla aparte no hay holds huérfanos; además, su índice (con `released_at` NULL) no bloqueaba nada |
+| Cancelación | Solo desde `AGENDADA` | También desde pago pendiente y pago en caja | El mockup P-02 ofrece «Cancelar» en esos estados |
+| Cancelación de una cita pagada | Cargo **y** crédito, por separado | El cargo sale de lo pagado y el resto es crédito (RN-16) | Evita cobrar dos veces la misma sesión |
+| `clinical_notes` y `audit_log` | *Trigger* solo contra UPDATE de notas | *Triggers* contra UPDATE y DELETE en ambas tablas | El doc 06 §7 prohíbe el borrado físico; una bitácora editable no prueba nada |
+| `payment_statuses` | Cinco estados | Se añade `EXONERADO` | Lo usa el diagrama de clases (doc 08) para RF-26 |
+| Ver el comprobante | URL prefirmada de 5 min | Ruta autenticada con 404 para terceros | Ver `docs/fase-2/02` §9 |
+
+### 9.3 Lo que queda para la Fase 3, además de §7
+
+- `notification_preferences` y el canal IN_APP: con un solo canal activo no hay preferencia
+  que guardar.
+- Consumir el crédito a favor en la cita siguiente. En esta fase se genera y se muestra al
+  paciente y a recepción.
+- Reprogramar en un solo paso. Hoy se cancela y se agenda de nuevo.

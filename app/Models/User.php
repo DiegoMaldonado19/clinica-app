@@ -32,8 +32,11 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasUuids, Notifiable;
 
-    /** Solo el personal entra al panel; el paciente usa el portal (F-08). */
-    private const PANEL_ROLES = ['admin', 'secretary'];
+    /** El personal entra al panel; el paciente, solo a su portal. */
+    private const PANEL_ROLES = [
+        'admin' => ['admin', 'secretary'],
+        'portal' => ['patient'],
+    ];
 
     /** @return BelongsTo<Role, $this> */
     public function role(): BelongsTo
@@ -55,7 +58,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->is_active && in_array($this->role->code, self::PANEL_ROLES, true);
+        return $this->is_active && in_array($this->role->code, self::PANEL_ROLES[$panel->getId()] ?? [], true);
     }
 
     /**

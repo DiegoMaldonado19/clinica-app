@@ -23,6 +23,15 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
+    /** Paleta del sistema de diseno; el error es terracota, nunca rojo puro. */
+    public const COLORS = [
+        'primary' => '#4A5D4E',
+        'success' => '#5C7A5E',
+        'warning' => '#B8860B',
+        'danger' => '#A4534A',
+        'info' => '#5A7A8C',
+    ];
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -31,9 +40,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->passwordReset(RequestPasswordReset::class)
-            ->colors([
-                'primary' => Color::Amber,
-            ])
+            ->brandName('Clínica · Panel')
+            ->colors(array_map(Color::hex(...), self::COLORS))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

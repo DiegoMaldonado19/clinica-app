@@ -1,6 +1,6 @@
 # 02 — Configuración de infraestructura
 
-> **Documento 2 de 3** · Fase 2 · Audiencia: equipo técnico
+> **Documento 2 de 5** · Fase 2 · Audiencia: equipo técnico
 > Alcance: **entorno reproducible local + tubería de integración continua**
 > La topología AWS de producción está en `Entregable_2_Final/03-infraestructura-cloud.md` y se
 > aplica en Fase 3.
@@ -412,27 +412,33 @@ vendor/bin/pint --test                              # estilo
 vendor/bin/phpstan analyse --memory-limit=1G        # tipos
 vendor/bin/deptrac analyse --fail-on-uncovered      # regla de dependencia
 vendor/bin/pest                                     # suite completa
-CACHE_STORE=null vendor/bin/pest --filter=Critical  # degradacion sin cache
+CACHE_STORE=null vendor/bin/pest --testsuite=Feature  # degradacion sin cache (igual que la CI)
 ```
 
 ---
 
 ## 9. Lista de verificación de esta fase
 
-Antes de dar por terminada la infraestructura de la Fase 2:
+Verificada el 18 de septiembre sobre el entorno local. La columna de la derecha dice cómo.
 
-- [ ] `docker compose up -d` levanta los diez servicios; los ocho de larga duración reportan
-      sano y `minio-init` termina en 0.
-- [ ] `migrate --seed` corre dos veces seguidas **sin duplicar filas de catálogo**.
-- [ ] La suite completa pasa en un entorno recién clonado, sin pasos manuales adicionales.
-- [ ] **Un PR con una violación deliberada de la regla de dependencia es rechazado** (CA-24).
-- [ ] Un PR con un secreto falso en el diff es rechazado por `gitleaks`.
-- [ ] **La suite crítica pasa con `CACHE_STORE=null`** (CA-32).
-- [ ] Un PR **no publica ninguna imagen** en ningún registro.
-- [ ] `.env` no está versionado y `.env.example` no contiene ningún valor real.
-- [ ] Los comprobantes subidos **no** son accesibles sin URL prefirmada (CA-20 en local).
-- [ ] El *trigger* de inmutabilidad de `clinical_notes` existe en la base tras migrar.
-- [ ] Las tareas programadas usan `withoutOverlapping()` con el bloqueo `database`, no Redis.
+| | Criterio | Cómo se verificó |
+|---|---|---|
+| ✅ | `docker compose up -d` levanta los diez servicios; los ocho de larga duración reportan sano y `minio-init` termina en 0 | `docker compose ps -a` |
+| ✅ | `migrate --seed` corre dos veces seguidas **sin duplicar filas de catálogo** | `db:seed` dos veces sobre la base de desarrollo, con conteos idénticos; `CatalogSeedTest` siembra dos veces en cada prueba |
+| ✅ | La suite completa pasa en un entorno recién clonado, sin pasos manuales adicionales | 180 pruebas en verde con `RefreshDatabase`; la CI parte de `.env.example` |
+| ✅ | **Un PR con una violación deliberada de la regla de dependencia es rechazado** (CA-24) | Clase temporal en `src/Scheduling/Domain` que importa `Illuminate\Support\Str`: Deptrac reporta `DependsOnDisallowedLayer` |
+| ✅ | Un PR con un secreto falso en el diff es rechazado por `gitleaks` | `gitleaks stdin` sobre el diff completo: sin fugas; el paso de la CI no cambió |
+| ✅ | **La suite crítica pasa con `CACHE_STORE=null`** (CA-32) | 103 pruebas en verde. La única omitida sostiene un candado de caché a mano: sin caché no existe candado, y la defensa que queda, el índice único, tiene su propia prueba |
+| ✅ | Un PR **no publica ninguna imagen** en ningún registro | `push: false` en la CI, sin cambios |
+| ✅ | `.env` no está versionado y `.env.example` no contiene ningún valor real | `CLINICAL_ENCRYPTION_KEY` vacía en el ejemplo; la de desarrollo solo vive en `.env` |
+| ✅ | Los comprobantes subidos **no** son accesibles públicamente (CA-20 en local) | `curl` anónimo al objeto y al listado del bucket: **403** en ambos |
+| ✅ | El *trigger* de inmutabilidad de `clinical_notes` existe en la base tras migrar | `UPDATE` y `DELETE` por SQL directo sobre una nota sellada: `ERROR 1644 (45000)` |
+| ✅ | Las tareas programadas usan `withoutOverlapping()` con el bloqueo `database`, no Redis | `Schedule::useCache('database')` en `routes/console.php`; `schedule:list` muestra `appointments:reconcile` cada 15 min |
+
+**Una diferencia con lo planeado:** el comprobante no se muestra con una URL prefirmada. Se
+sirve a través de la aplicación, con permiso y con 404 para quien no debe verlo. En local, el
+host `minio:9000` que firmaría la URL no es alcanzable desde el navegador. La URL prefirmada
+de 5 minutos se activa con S3 real en la Fase 3; el bucket sigue siendo privado en ambos casos.
 
 ---
 

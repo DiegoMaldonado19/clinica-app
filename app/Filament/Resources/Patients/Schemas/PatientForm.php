@@ -6,7 +6,9 @@ use App\Models\Patient;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
 
@@ -50,6 +52,21 @@ class PatientForm
                     ->label('Telefono de emergencia')
                     ->tel()
                     ->maxLength(20),
+                TextInput::make('nit')
+                    ->label('NIT')
+                    ->maxLength(20),
+                // Ficha administrativa (doc 05 §4.3): recepcion la ve y la edita.
+                // El contenido clinico nunca aparece aqui.
+                Section::make('Ficha administrativa')
+                    ->relationship('clinicalRecord')
+                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => $data + ['opened_at' => now()])
+                    ->visible(fn (): bool => (bool) auth()->user()?->hasAbility('clinical_intake.view'))
+                    ->disabled(fn (): bool => ! auth()->user()?->hasAbility('clinical_intake.create'))
+                    ->columnSpanFull()
+                    ->schema([
+                        Textarea::make('reported_reason')->label('Motivo de consulta reportado'),
+                        TextInput::make('referred_by')->label('Referido por')->maxLength(150),
+                    ]),
             ]);
     }
 

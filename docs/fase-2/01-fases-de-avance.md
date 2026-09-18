@@ -1,6 +1,6 @@
 # 01 — Fases de avance de la Fase 2
 
-> **Documento 1 de 3** · Fase 2 · Audiencia: equipo técnico
+> **Documento 1 de 5** · Fase 2 · Audiencia: equipo técnico
 > Ventana: **8 → 20 de septiembre de 2026** · 12 fases · una fase = un día = un commit
 
 ---
