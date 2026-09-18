@@ -21,5 +21,9 @@ abstract class TestCase extends BaseTestCase
 
         // Llave SOAP efimera: ninguna llave de cifrado real vive en el repositorio.
         config(['clinic.encryption_key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+        // La suite prueba HTML, no el empaquetado: sin esto las vistas con @vite
+        // revientan donde no hay `npm run build` (la tuberia no construye el front).
+        $this->withoutVite();
     }
 }
