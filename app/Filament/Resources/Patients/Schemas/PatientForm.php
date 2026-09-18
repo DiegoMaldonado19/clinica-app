@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources\Patients\Schemas;
 
+use App\Filament\Schemas\PersonFields;
+use App\Filament\Support\DomainCommand;
+use App\Identity\Infrastructure\DatabasePatientRegistry;
 use App\Models\Patient;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -18,8 +22,8 @@ class PatientForm
     {
         return $schema
             ->components([
-                // La ficha extiende una cuenta ya existente: es la relacion
-                // 1-0..1 del ERD. La cuenta se da de alta en Usuarios.
+                // La ficha extiende una cuenta: es la relacion 1-0..1 del ERD. Si
+                // la cuenta no existe, se crea aqui mismo con su acceso al portal.
                 Select::make('id')
                     ->label('Cuenta')
                     ->options(fn (?Patient $record): array => User::query()
@@ -32,7 +36,13 @@ class PatientForm
                         ->all())
                     ->searchable()
                     ->required()
-                    ->disabledOn('edit'),
+                    ->disabledOn('edit')
+                    ->createOptionForm(PersonFields::make())
+                    ->createOptionModalHeading('Nueva cuenta de paciente')
+                    ->createOptionUsing(fn (array $data): string => DB::transaction(
+                        fn (): string => app(DatabasePatientRegistry::class)->registerAccount($data['name'], $data['email'], $data['phone_e164'] ?? null),
+                    ))
+                    ->createOptionAction(fn (Action $action): Action => $action->visible(DomainCommand::userCan('patient.create'))),
                 Select::make('document_type_id')
                     ->label('Tipo de documento')
                     ->options(fn (): array => self::catalog('document_types')),
@@ -52,9 +62,7 @@ class PatientForm
                     ->label('Telefono de emergencia')
                     ->tel()
                     ->maxLength(20),
-                TextInput::make('nit')
-                    ->label('NIT')
-                    ->maxLength(20),
+                PersonFields::nit(),
                 // Ficha administrativa (doc 05 §4.3): recepcion la ve y la edita.
                 // El contenido clinico nunca aparece aqui.
                 Section::make('Ficha administrativa')

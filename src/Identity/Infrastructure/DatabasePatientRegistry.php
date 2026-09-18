@@ -27,15 +27,20 @@ final readonly class DatabasePatientRegistry implements PatientRegistry
 
     public function findOrRegister(string $name, string $email, string $phoneE164, string $nit): string
     {
-        $email = Str::lower(trim($email));
-        $existing = DB::table('users')->where('email', $email)->value('id');
+        $existing = DB::table('users')->where('email', Str::lower(trim($email)))->value('id');
+        $id = $existing !== null ? (string) $existing : $this->registerAccount($name, $email, $phoneE164);
 
-        if ($existing !== null) {
-            DB::table('patients')->insertOrIgnore(['id' => $existing, 'nit' => $nit, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('patients')->insertOrIgnore(['id' => $id, 'nit' => $nit, 'created_at' => now(), 'updated_at' => now()]);
 
-            return (string) $existing;
-        }
+        return $id;
+    }
 
+    /**
+     * Cuenta de paciente con credencial temporal (RN-15) y su aviso NT-02, sin
+     * ficha: la usa tambien el alta rapida desde la ficha del paciente.
+     */
+    public function registerAccount(string $name, string $email, ?string $phoneE164): string
+    {
         $id = (string) Str::uuid7();
         $password = Str::password(12, symbols: false);
         $ttlHours = (int) $this->rules->value('RN-15', 'temp_password_ttl_hours');
@@ -44,7 +49,7 @@ final readonly class DatabasePatientRegistry implements PatientRegistry
             'id' => $id,
             'role_id' => DB::table('roles')->where('code', 'patient')->value('id'),
             'name' => $name,
-            'email' => $email,
+            'email' => Str::lower(trim($email)),
             'phone_e164' => $phoneE164,
             'password' => Hash::make($password),
             'must_change_password' => true,
@@ -53,7 +58,6 @@ final readonly class DatabasePatientRegistry implements PatientRegistry
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('patients')->insert(['id' => $id, 'nit' => $nit, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->events->publish(new PatientAccountCreated($id, $this->clock->now(), $password, $ttlHours));
 

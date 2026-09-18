@@ -12,15 +12,14 @@ use App\Scheduling\Domain\Exception\SlotUnavailable;
 use App\Scheduling\Domain\ValueObject\TimeSlot;
 use App\Shared\Domain\ValueObject\Nit;
 use App\Shared\Domain\ValueObject\PhoneNumber;
+use App\Support\DomainRule;
 use App\Support\PolicyText;
-use Closure;
 use DomainException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
-use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -112,8 +111,8 @@ final class BookingWizard extends Component
         $this->validate([
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:190'],
-            'phone' => ['required', $this->rule(fn (string $v) => PhoneNumber::fromGuatemalan($v))],
-            'nit' => ['required', $this->rule(fn (string $v) => Nit::from($v))],
+            'phone' => ['required', DomainRule::from(fn (string $v) => PhoneNumber::fromGuatemalan($v))],
+            'nit' => ['required', DomainRule::from(fn (string $v) => Nit::from($v))],
             'accepted' => ['accepted'],
         ], [
             'name.required' => 'Necesitamos tu nombre completo para registrar la cita.',
@@ -279,17 +278,5 @@ final class BookingWizard extends Component
     private function timezone(): string
     {
         return config('clinic.timezone');
-    }
-
-    /** Adapta la validacion de un objeto de valor del dominio a una regla de Laravel. */
-    private function rule(callable $parse): Closure
-    {
-        return function (string $attribute, mixed $value, Closure $fail) use ($parse): void {
-            try {
-                $parse((string) $value);
-            } catch (InvalidArgumentException $exception) {
-                $fail($exception->getMessage());
-            }
-        };
     }
 }

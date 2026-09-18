@@ -102,6 +102,22 @@ Lo que ve el personal y lo que ve el paciente.
 
 Todo estado se muestra con **color e icono**, nunca solo con color.
 
+### Crear sin salir del formulario
+
+Los desplegables del panel permiten elegir un elemento existente o crear uno nuevo con el
+botón **+**, sin navegar a otra pantalla. La ventana usa los mismos campos y validaciones que
+la pantalla completa, que sigue disponible.
+
+| Desplegable | Qué se crea | Quién ve el **+** |
+|---|---|---|
+| Paciente, al agendar por teléfono | Cuenta y ficha del paciente, con su acceso al portal por correo | Recepción y psicóloga |
+| Cuenta, en la ficha del paciente | Cuenta de paciente con su acceso al portal | Recepción y psicóloga |
+| Servicio, al agendar por teléfono | Servicio con su tarifa inicial | Solo la psicóloga |
+| Categoría, en el servicio | Categoría de servicio | Solo la psicóloga |
+
+Los catálogos fijos (roles, tipos de documento, sexo, estados) no se crean desde un
+desplegable: su contenido lo define el diseño y lo usan las reglas del sistema.
+
 ## 5. Lo que el sistema hace solo
 
 | Qué | Cuándo |

@@ -209,14 +209,20 @@ El sistema **nunca aprueba un pago solo**: la decisión siempre es tuya.
 
 ## MU-09 · Agendar por teléfono o en recepción
 
-1. Si la persona es nueva, primero dala de alta en **Usuarios**, con rol Paciente, y luego en
-   **Pacientes**.
-2. En **Citas**, pulsa **Agendar por teléfono**.
-3. Elige paciente, servicio, fecha y hora. Solo aparecen horarios libres, y **sí puedes
-   agendar para hoy**.
+1. En **Citas**, pulsa **Agendar por teléfono**.
+2. Elige al paciente en la lista. **Si es nuevo**, pulsa el botón **+** junto al campo:
+   - completa nombre, correo, teléfono y NIT, y guarda;
+   - el paciente queda creado y elegido, sin salir del formulario;
+   - le llega por correo su acceso al portal, igual que si hubiera agendado por la web.
+3. Elige servicio, fecha y hora. Solo aparecen horarios libres, y **sí puedes agendar para
+   hoy**.
 4. Indica si la solicitud llegó **por teléfono** o **en recepción**, y guarda.
 
 `[captura: formulario «Agendar por teléfono o en recepción»]`
+`[captura: ventana «Nuevo paciente» abierta desde el botón +]`
+
+El alta rápida valida lo mismo que la pantalla completa. Si el correo ya está registrado, te
+lo indica: búscalo en la lista en lugar de crearlo otra vez.
 
 La cita nace **ya aprobada**. Si faltan menos de 3 horas para la cita, queda directamente
 como **pago en caja**.
@@ -293,6 +299,10 @@ Los días bloqueados dejan de ofrecerse en la web al instante. Para reabrirlos, 
 
 **Tarifas.** En **Servicios y tarifas**, edita el servicio y pulsa **Programar nueva tarifa**.
 Indica el monto y desde cuándo rige. **Las citas ya solicitadas conservan su tarifa.**
+
+**Servicios y categorías nuevos.** Al crear un servicio, el botón **+** junto a *Categoría*
+agrega una categoría sin salir del formulario. Al agendar por teléfono, el **+** junto a
+*Servicio* crea un servicio con su tarifa en el momento. Ese botón solo lo ve la psicóloga.
 
 **Plazos y políticas.** En **Plazos y políticas** ves los valores vigentes: plazo de
 aprobación, anticipación mínima, límite de pago, tramos de cancelación, recordatorios y
