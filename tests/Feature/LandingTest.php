@@ -25,7 +25,7 @@ it('refleja en la landing un cambio de la politica sin desplegar', function () {
         'param_value' => '[{"h":48,"pct":0},{"h":2,"pct":50},{"h":0,"pct":100}]', 'effective_from' => now()->subMinute(),
     ]);
 
-    $this->get('/')->assertSee('48 horas o más de anticipación')->assertSee('Entre 48 horas y 2 horas');
+    $this->get('/')->assertSuccessful()->assertSee('48 horas o más de anticipación')->assertSee('Entre 48 horas y 2 horas');
 });
 
 it('abre el wizard de agendamiento', function () {
