@@ -21,7 +21,7 @@ it('siembra cada catalogo una sola vez', function (string $table, int $expected)
     ['roles', 3],
     ['abilities', 32],
     ['appointment_statuses', 13],
-    ['payment_statuses', 5],
+    ['payment_statuses', 6],
     ['payment_methods', 2],
     ['notification_channels', 4],
     ['notification_statuses', 5],

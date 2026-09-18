@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Filament\Schemas\PersonFields;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,20 +18,7 @@ class UserForm
                     ->label('Rol')
                     ->relationship('role', 'label')
                     ->required(),
-                TextInput::make('name')
-                    ->label('Nombre')
-                    ->maxLength(150)
-                    ->required(),
-                TextInput::make('email')
-                    ->label('Correo')
-                    ->email()
-                    ->maxLength(190)
-                    ->unique(ignoreRecord: true)
-                    ->required(),
-                TextInput::make('phone_e164')
-                    ->label('Telefono')
-                    ->tel()
-                    ->maxLength(20),
+                ...PersonFields::make(),
                 // En el alta se genera una credencial temporal (RN-15); al editar,
                 // dejarla vacia conserva la actual.
                 TextInput::make('password')

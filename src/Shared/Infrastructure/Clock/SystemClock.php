@@ -6,12 +6,12 @@ namespace App\Shared\Infrastructure\Clock;
 
 use App\Shared\Domain\Clock\ClockInterface;
 use DateTimeImmutable;
-use DateTimeZone;
 
 final class SystemClock implements ClockInterface
 {
+    /** Pasa por Carbon para que `travelTo()` de las pruebas mueva tambien al dominio. */
     public function now(): DateTimeImmutable
     {
-        return new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        return now('UTC')->toDateTimeImmutable();
     }
 }

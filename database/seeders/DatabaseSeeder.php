@@ -15,6 +15,13 @@ class DatabaseSeeder extends Seeder
             CatalogSeeder::class,
             BusinessRuleSettingsSeeder::class,
             RoleAbilitySeeder::class,
+            ClinicSeeder::class,
+            NotificationTemplateSeeder::class,
         ]);
+
+        // Contrasenas conocidas solo en la maquina del desarrollador.
+        if (app()->isLocal()) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }

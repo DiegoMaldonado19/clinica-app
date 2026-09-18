@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use Closure;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,7 +29,7 @@ class EnforceTemporaryPassword
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('filament.admin.auth.login')
+            return redirect()->to(Filament::getCurrentPanel()?->getLoginUrl() ?? route('filament.admin.auth.login'))
                 ->withErrors(['email' => __('La contrasena temporal vencio. Solicite una nueva.')]);
         }
 

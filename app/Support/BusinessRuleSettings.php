@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Shared\Domain\BusinessRules;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -14,7 +15,7 @@ use RuntimeException;
  * Devuelve el valor vigente: la fila con `effective_from` mas reciente que ya
  * haya entrado en vigor, que es lo que permite programar un cambio con fecha.
  */
-final class BusinessRuleSettings
+final class BusinessRuleSettings implements BusinessRules
 {
     /** @return int|float|bool|string|array<mixed> */
     public function value(string $ruleCode, string $paramKey): int|float|bool|string|array

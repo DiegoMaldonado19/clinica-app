@@ -18,5 +18,8 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         Cache::flush();
+
+        // Llave SOAP efimera: ninguna llave de cifrado real vive en el repositorio.
+        config(['clinic.encryption_key' => 'base64:'.base64_encode(random_bytes(32))]);
     }
 }
