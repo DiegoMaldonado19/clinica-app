@@ -88,6 +88,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # El driver docker por defecto no exporta cache; buildx si (type=gha).
+      - uses: docker/setup-buildx-action@v3
+
       # Se construye para verificar que construye. NO se publica (ADR-016).
       - name: Construir imagen de produccion (sin publicar)
         uses: docker/build-push-action@v6
