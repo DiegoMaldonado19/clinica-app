@@ -21,6 +21,7 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,9 @@ class CreateAppointment extends CreateRecord
     protected static string $resource = AppointmentResource::class;
 
     protected static ?string $title = 'Agendar por teléfono o en recepción';
+
+    /** @var list<string> se calcula al elegir el servicio, no en cada peticion */
+    public array $disabledDates = [];
 
     public function form(Schema $schema): Schema
     {
@@ -55,17 +59,26 @@ class CreateAppointment extends CreateRecord
                 ->options(fn (): array => Service::query()->where('is_active', true)->pluck('name', 'id')->all())
                 ->required()
                 ->live()
+                ->afterStateUpdated(function (Set $set, ?string $state): void {
+                    $set('starts_at', null);
+                    $this->disabledDates = self::datesWithoutTimes($state);
+                })
                 ->createOptionForm(ServiceResource::formFields())
                 ->createOptionModalHeading('Nuevo servicio')
                 ->createOptionUsing(fn (array $data): string => Service::register($data)->id)
                 ->createOptionAction(fn (Action $action): Action => $action->visible(DomainCommand::userCan('settings.manage'))),
             DatePicker::make('date')->label('Fecha')
                 ->minDate(now(config('clinic.timezone'))->startOfDay())
+                ->disabledDates(fn (): array => $this->disabledDates)
                 ->native(false)
                 ->required()
-                ->live(),
+                ->live()
+                ->afterStateUpdated(fn (Set $set) => $set('starts_at', null)),
             Select::make('starts_at')->label('Hora')
                 ->options(fn (Get $get): array => self::freeTimes($get('service_id'), $get('date')))
+                ->placeholder(fn (Get $get): string => $get('service_id') && $get('date') && self::freeTimes($get('service_id'), $get('date')) === []
+                    ? 'Sin horarios libres ese día'
+                    : __('filament-forms::components.select.placeholder'))
                 ->helperText('Solo se ofrecen horarios libres; los bloqueos de agenda ya están descontados.')
                 ->required(),
             Radio::make('source')->label('¿Cómo llegó la solicitud?')
@@ -96,6 +109,23 @@ class CreateAppointment extends CreateRecord
     protected function getRedirectUrl(): string
     {
         return AppointmentResource::getUrl('view', ['record' => $this->record]);
+    }
+
+    /** @return list<string> fechas `Y-m-d` que el calendario no deja elegir */
+    private static function datesWithoutTimes(?string $serviceId): array
+    {
+        if ($serviceId === null) {
+            return [];
+        }
+
+        $today = now(config('clinic.timezone'))->startOfDay();
+
+        // ponytail: solo los proximos 60 dias; mas alla avisa el campo Hora. Ampliar si recepcion agenda mas lejos.
+        return collect(range(0, 59))
+            ->map(fn (int $offset): string => $today->copy()->addDays($offset)->toDateString())
+            ->filter(fn (string $date): bool => self::freeTimes($serviceId, $date) === [])
+            ->values()
+            ->all();
     }
 
     /** @return array<int, string> marca de tiempo UTC => hora local */

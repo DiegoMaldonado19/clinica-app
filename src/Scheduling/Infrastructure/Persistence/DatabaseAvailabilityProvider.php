@@ -42,14 +42,19 @@ final class DatabaseAvailabilityProvider implements AvailabilityProvider
         ), $cached);
     }
 
-    /** Invalida el dia local de ese instante para todas las duraciones de servicio. */
+    /**
+     * Invalida el dia local de ese instante para todas las duraciones de servicio.
+     * Tras el commit: antes, otra peticion volveria a cachear el dia sin el cambio.
+     */
     public static function forget(string $therapistId, DateTimeImmutable $startsAt, DateTimeZone $timezone): void
     {
         $day = $startsAt->setTimezone($timezone)->setTime(0, 0);
 
-        foreach (DB::table('services')->distinct()->pluck('duration_minutes') as $minutes) {
-            Cache::forget(self::key($therapistId, $day, (int) $minutes));
-        }
+        DB::afterCommit(function () use ($therapistId, $day): void {
+            foreach (DB::table('services')->distinct()->pluck('duration_minutes') as $minutes) {
+                Cache::forget(self::key($therapistId, $day, (int) $minutes));
+            }
+        });
     }
 
     /** @return list<TimeSlot> */

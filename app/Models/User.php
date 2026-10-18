@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Auth\AbilityMatrix;
 use Database\Factories\UserFactory;
+use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -59,6 +60,13 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->is_active && in_array($this->role->code, self::PANEL_ROLES[$panel->getId()] ?? [], true);
+    }
+
+    public function homePanel(): Panel
+    {
+        $panelId = collect(self::PANEL_ROLES)->search(fn (array $roles): bool => in_array($this->role->code, $roles, true));
+
+        return Filament::getPanel($panelId ?: null);
     }
 
     /**

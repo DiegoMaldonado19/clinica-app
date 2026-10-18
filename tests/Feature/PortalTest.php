@@ -84,7 +84,9 @@ it('sirve el comprobante al paciente y a recepcion, y 404 a cualquier otro (doc 
     $stranger = User::factory()->role('patient')->create();
 
     $this->actingAs($this->patient)->get(route('payment-proofs.show', $proof))->assertSuccessful();
-    $this->actingAs($this->secretary)->get(route('payment-proofs.show', $proof))->assertSuccessful();
+    // El panel lo incrusta en la conciliacion.
+    $this->actingAs($this->secretary)->get(route('payment-proofs.show', $proof))->assertSuccessful()
+        ->assertHeader('Content-Security-Policy', "frame-ancestors 'self'");
     $this->actingAs($stranger)->get(route('payment-proofs.show', $proof))->assertNotFound();
 });
 

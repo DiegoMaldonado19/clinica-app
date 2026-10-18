@@ -5,9 +5,9 @@
 #   --target prod  codigo dentro de la imagen, opcache sellado. Es la que va al registro.
 
 # ─────────────────────────────── base ────────────────────────────────
-FROM php:8.4-fpm-alpine AS base
+FROM php:8.4.26-fpm-alpine AS base
 
-COPY --from=mlocati/php-extension-installer:2 /usr/bin/install-php-extensions /usr/local/bin/
+COPY --from=mlocati/php-extension-installer:2.12.0 /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions pdo_mysql redis gd intl zip bcmath opcache \
     && rm /usr/local/bin/install-php-extensions
 
@@ -21,7 +21,7 @@ FROM base AS dev
 ARG UID=1000
 ARG GID=1000
 
-COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+COPY --from=composer:2.9.8 /usr/bin/composer /usr/local/bin/composer
 
 # La recarga en caliente es esto y nada mas: opcache revalida el mtime en cada
 # peticion, de modo que el codigo del bind mount surte efecto sin reconstruir
@@ -39,7 +39,7 @@ RUN apk add --no-cache shadow \
 USER www-data
 
 # ─────────────────────────────── assets ──────────────────────────────
-FROM node:24-alpine AS assets
+FROM node:24.21.0-alpine AS assets
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -56,7 +56,7 @@ FROM base AS prod
 RUN printf 'opcache.enable=1\nopcache.validate_timestamps=0\nopcache.memory_consumption=192\nopcache.max_accelerated_files=20000\n' \
     > /usr/local/etc/php/conf.d/zz-opcache.ini
 
-COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+COPY --from=composer:2.9.8 /usr/bin/composer /usr/local/bin/composer
 
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
@@ -71,7 +71,7 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
 # ──────────────────────────────── web ────────────────────────────────
 # nginx con los estaticos ya construidos. Sale del mismo build que `prod`,
 # asi que servidor web y aplicacion nunca sirven versiones distintas.
-FROM nginx:alpine AS web
+FROM nginxinc/nginx-unprivileged:1.30.5-alpine AS web
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=prod /var/www/html/public /var/www/html/public
