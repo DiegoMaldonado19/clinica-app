@@ -12,6 +12,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Doc 05 §7: quien no puede verlo recibe 404, no 403. Un 403 confirmaria que
  * el comprobante existe.
+ *
+ * Sale de la app y no de una URL prefirmada: el panel lo incrusta, y solo una
+ * respuesta propia puede abrir `frame-ancestors` sobre el `X-Frame-Options: DENY` de nginx.
  */
 class PaymentProofController extends Controller
 {
@@ -29,6 +32,7 @@ class PaymentProofController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="comprobante.pdf"',
             'Cache-Control' => 'private, no-store',
+            'Content-Security-Policy' => "frame-ancestors 'self'",
         ]);
     }
 }

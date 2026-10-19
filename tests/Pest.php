@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Scheduling\Application\BookingService;
 use App\Scheduling\Application\RequestPreAppointment;
+use App\Scheduling\Domain\ValueObject\TimeSlot;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -30,6 +31,16 @@ function therapistId(): string
 function serviceId(string $name = 'Terapia individual'): string
 {
     return (string) DB::table('services')->where('name', $name)->value('id');
+}
+
+/** @return list<string> horas locales que el calendario ofrece a recepcion ese dia */
+function freeHours(string $date): array
+{
+    $slots = app(BookingService::class)->bookableSlots(
+        serviceId(), therapistId(), Carbon::parse($date, 'America/Guatemala')->toDateTimeImmutable(), assisted: true,
+    );
+
+    return array_map(fn (TimeSlot $slot): string => Carbon::instance($slot->startsAt)->tz('America/Guatemala')->format('H:i'), $slots);
 }
 
 function statusOf(string $appointmentId): string

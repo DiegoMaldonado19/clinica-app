@@ -12,7 +12,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:11.4
+        image: mariadb:11.4.13
         env:
           MARIADB_ROOT_PASSWORD: secret
           MARIADB_DATABASE: clinica_test
@@ -21,7 +21,7 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=10s --health-timeout=5s --health-retries=5
       redis:
-        image: redis:7-alpine
+        image: redis:7.4.11-alpine
         ports: ['6379:6379']
         options: >-
           --health-cmd="redis-cli ping"
@@ -38,68 +38,82 @@ jobs:
       REDIS_PORT: 6379
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0        # gitleaks necesita el historial para resolver BASE^..HEAD
 
-      - uses: shivammathur/setup-php@v2
+      # El driver docker por defecto no exporta cache; buildx si (type=gha).
+      - uses: docker/setup-buildx-action@v4.4.1
+
+      # setup-php solo fija major.minor. La imagen `dev` trae la misma PHP y las
+      # mismas extensiones que produccion, sin repetir la lista aqui.
+      - name: Construir la imagen de desarrollo
+        uses: docker/build-push-action@v7.4.0
         with:
-          php-version: '8.4'
-          extensions: pdo_mysql, redis, gd, intl, zip, bcmath
-          coverage: none
+          context: .
+          file: docker/php/Dockerfile
+          target: dev
+          load: true
+          tags: clinica-app-dev:ci
+          cache-from: type=gha,scope=dev
+          cache-to: type=gha,mode=max,scope=dev
+
+      # Con el uid del runner para escribir en el checkout; red del host para
+      # llegar a los servicios del job.
+      - name: Arrancar el contenedor de PHP
+        run: >-
+          docker run -d --name php --network host --user "$(id -u):$(id -g)"
+          -v "$PWD":/var/www/html -e HOME=/tmp
+          -e DB_CONNECTION -e DB_HOST -e DB_PORT -e DB_DATABASE -e DB_USERNAME -e DB_PASSWORD -e REDIS_HOST -e REDIS_PORT
+          clinica-app-dev:ci tail -f /dev/null
 
       - name: Instalar dependencias
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: docker exec php composer install --prefer-dist --no-interaction --no-progress
 
       - name: Preparar entorno
         run: |
           cp .env.example .env
-          php artisan key:generate
+          docker exec php php artisan key:generate
 
       - name: Formato (Pint)
-        run: vendor/bin/pint --test
+        run: docker exec php vendor/bin/pint --test
 
       - name: Analisis estatico (Larastan)
-        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+        run: docker exec php vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
       # La regla de dependencia hexagonal. Si el dominio importa el framework,
       # este paso rompe la construccion (ADR-002, CA-24).
       - name: Regla de arquitectura (Deptrac)
-        run: vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
+        run: docker exec php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
 
       - name: Pruebas unitarias del dominio (sin base de datos)
-        run: vendor/bin/pest --testsuite=Unit
+        run: docker exec php vendor/bin/pest --testsuite=Unit
 
       - name: Pruebas de integracion y funcionales
         run: |
-          php artisan migrate --force
-          vendor/bin/pest --testsuite=Integration,Feature
+          docker exec php php artisan migrate --force
+          docker exec php vendor/bin/pest --testsuite=Integration,Feature
 
       # El sistema debe seguir funcionando sin cache (ADR-008). Si algo
       # imprescindible vive solo en Redis, este paso lo revela.
       - name: Prueba de degradacion sin cache
-        env:
-          CACHE_STORE: 'null'
-        run: vendor/bin/pest --testsuite=Feature
+        run: docker exec -e CACHE_STORE=null php vendor/bin/pest --testsuite=Feature
 
       - name: Dependencias con vulnerabilidades conocidas
-        run: composer audit
+        run: docker exec php composer audit
 
       - name: Escaneo de secretos
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # El driver docker por defecto no exporta cache; buildx si (type=gha).
-      - uses: docker/setup-buildx-action@v3
-
       # Se construye para verificar que construye. NO se publica (ADR-016).
       - name: Construir imagen de produccion (sin publicar)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
           file: docker/php/Dockerfile
           target: prod
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=prod
+          cache-to: type=gha,mode=max,scope=prod

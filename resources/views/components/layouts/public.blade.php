@@ -8,7 +8,7 @@
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="min-h-screen bg-page font-sans text-[16px] text-ink antialiased">
+    <body class="flex min-h-screen flex-col bg-page font-sans text-[16px] text-ink antialiased">
         <header class="border-b border-line bg-page/95">
             <nav class="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-5 py-4">
                 <a href="{{ url('/') }}" class="font-serif text-lg font-semibold text-primary">Psic. Andrea Morales</a>
@@ -21,7 +21,7 @@
             </nav>
         </header>
 
-        <main>
+        <main class="flex-1">
             {{ $slot }}
         </main>
 

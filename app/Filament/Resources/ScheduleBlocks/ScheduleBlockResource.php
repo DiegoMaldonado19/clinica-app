@@ -58,7 +58,9 @@ class ScheduleBlockResource extends Resource
     {
         $timezone = new DateTimeZone(config('clinic.timezone'));
 
-        for ($day = $block->starts_at->copy(); $day->lte($block->ends_at); $day = $day->addDay()) {
+        // Desde la medianoche local: avanzar 24 h desde la hora de inicio salta el
+        // ultimo dia cuando el bloqueo termina mas temprano de lo que empezo.
+        for ($day = $block->starts_at->copy()->tz($timezone)->startOfDay(); $day->lte($block->ends_at); $day = $day->addDay()) {
             DatabaseAvailabilityProvider::forget($block->therapist_id, $day->toDateTimeImmutable(), $timezone);
         }
     }

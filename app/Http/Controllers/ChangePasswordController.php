@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -18,7 +17,7 @@ class ChangePasswordController extends Controller
 {
     public function edit(): View
     {
-        return view('auth.change-password');
+        return view('auth.change-password', ['minLength' => Password::defaults()->appliedRules()['min']]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -33,8 +32,6 @@ class ChangePasswordController extends Controller
             'temp_password_expires_at' => null,
         ])->save();
 
-        $panel = $request->user()->role->code === 'patient' ? 'portal' : 'admin';
-
-        return redirect()->intended(Filament::getPanel($panel)->getUrl());
+        return redirect()->intended($request->user()->homePanel()->getUrl());
     }
 }

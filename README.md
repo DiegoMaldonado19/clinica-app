@@ -66,6 +66,52 @@ app/                           Laravel: paneles Filament, Livewire, modelos de l
 Contextos: `Scheduling`, `Billing`, `ClinicalRecords`, `Identity`, `Notifications`, `Shared`.
 Se comunican solo por eventos de dominio.
 
+## Tecnologías y versiones
+
+Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package-lock.json`.
+
+**Aplicación**
+
+| Tecnología | Versión |
+|---|---|
+| PHP | 8.4.26 |
+| Laravel | 13.31.0 |
+| Filament | 5.8.4 |
+| Livewire | 4.4.0 |
+| Vite · Tailwind CSS | 8.2.2 · 4.3.3 |
+
+**Pruebas y calidad**
+
+| Herramienta | Versión |
+|---|---|
+| Pest (sobre PHPUnit 13.3.2) | 5.1.4 |
+| PHPStan · Larastan | 2.2.13 · 3.11.0 |
+| Deptrac | 4.7.1 |
+| Pint | 1.30.5 |
+
+**Imágenes Docker**
+
+| Imagen | Uso |
+|---|---|
+| `php:8.4.26-fpm-alpine` | Base de los destinos `dev` y `prod`; la CI corre dentro de `dev` |
+| `mlocati/php-extension-installer:2.12.0` | Instala las extensiones de PHP |
+| `composer:2.9.8` | Composer dentro de `dev` y `prod` |
+| `node:24.21.0-alpine` | Construcción de los assets y Vite en local |
+| `nginxinc/nginx-unprivileged:1.30.5-alpine` | Servidor web, sin root |
+| `mariadb:11.4.13` | Base de datos en local y en la CI |
+| `redis:7.4.11-alpine` | Caché en local y en la CI |
+| `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` | S3 en local; con su `mc` se crea el bucket |
+| `axllent/mailpit:v1.31.3` | Correo capturado en local |
+
+**GitHub Actions**
+
+| Action | Versión |
+|---|---|
+| `actions/checkout` | v7.0.1 |
+| `docker/setup-buildx-action` | v4.4.1 |
+| `docker/build-push-action` | v7.4.0 |
+| `gitleaks/gitleaks-action` | v3.0.0 |
+
 ## Documentación
 
 | Documento | Para |

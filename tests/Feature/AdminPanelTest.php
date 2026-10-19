@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Scheduling\Application\AppointmentTransitions;
 use App\Scheduling\Domain\Exception\SlotUnavailable;
 use Database\Seeders\DatabaseSeeder;
+use Filament\Forms\Components\DatePicker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -134,6 +135,51 @@ it('rechaza un bloqueo con citas sin resolver y lo acepta despues (RN-18)', func
         ->and(statusOf($pending))->toBe('RECHAZADA')
         ->and(dispatchedTemplates())->toContain('NT-22')
         ->and(fn () => requestAppointment('2026-09-18 16:00', 'x@correo.test'))->toThrow(SlotUnavailable::class);
+});
+
+it('deja de ofrecer cada dia de un bloqueo de varios dias, tambien el ultimo (HU-20)', function () {
+    $morning = ['08:00', '09:00', '10:00', '11:00'];
+    $afternoon = ['15:00', '16:00', '17:00', '18:00'];
+    // El viernes ya esta en cache, como tras cualquier visita al calendario.
+    expect(freeHours('2026-09-25'))->toBe([...$morning, ...$afternoon]);
+
+    Livewire::actingAs($this->admin)->test(CreateScheduleBlock::class)
+        ->fillForm(['starts_at' => '2026-09-21 15:00', 'ends_at' => '2026-09-25 12:00', 'reason' => 'Congreso'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(freeHours('2026-09-21'))->toBe($morning)
+        ->and(freeHours('2026-09-23'))->toBe([])
+        ->and(freeHours('2026-09-25'))->toBe($afternoon)
+        ->and(freeHours('2026-09-26'))->toBe($morning)
+        ->and(fn () => requestAppointment('2026-09-25 10:00'))->toThrow(SlotUnavailable::class);
+});
+
+it('limpia la hora elegida al cambiar la fecha o el servicio', function () {
+    Livewire::actingAs($this->secretary)->test(CreateAppointment::class)
+        ->fillForm(['service_id' => serviceId(), 'date' => '2026-09-16', 'starts_at' => gtAt('2026-09-16 08:00')->getTimestamp()])
+        ->fillForm(['date' => '2026-09-17'])
+        ->assertFormSet(['starts_at' => null])
+        ->fillForm(['starts_at' => gtAt('2026-09-17 08:00')->getTimestamp()])
+        ->fillForm(['service_id' => serviceId('Terapia de pareja')])
+        ->assertFormSet(['starts_at' => null]);
+});
+
+it('deshabilita los dias sin horarios libres y avisa si se elige uno', function () {
+    Livewire::actingAs($this->admin)->test(CreateScheduleBlock::class)
+        ->fillForm(['starts_at' => '2026-09-21 00:00', 'ends_at' => '2026-09-22 00:00', 'reason' => 'Feriado'])
+        ->call('create');
+
+    Livewire::actingAs($this->secretary)->test(CreateAppointment::class)
+        ->fillForm(['service_id' => serviceId()])
+        ->assertFormFieldExists('date', function (DatePicker $field): bool {
+            // Domingo sin horario y lunes bloqueado; hoy y el martes conservan horas.
+            expect($field->getDisabledDates())->toContain('2026-09-20', '2026-09-21')->not->toContain('2026-09-15', '2026-09-22');
+
+            return true;
+        })
+        ->fillForm(['date' => '2026-09-20'])
+        ->assertSee('Sin horarios libres ese día');
 });
 
 it('lista la agenda semanal con 8 consultas o menos (CA-17)', function () {

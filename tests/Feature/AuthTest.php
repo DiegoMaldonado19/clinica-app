@@ -89,6 +89,34 @@ it('cierra la sesion si la contrasena temporal ya vencio', function () {
     $this->assertGuest();
 });
 
+it('devuelve al paciente al login del portal si su contrasena temporal vencio', function () {
+    $patient = User::factory()->role('patient')->withTemporaryPassword('-1 hour')->create();
+
+    $this->actingAs($patient)->get(route('password.change'))->assertRedirect(route('filament.portal.auth.login'));
+
+    $this->assertGuest();
+    $this->get(route('filament.portal.auth.login'))->assertSee('La contraseña temporal venció');
+});
+
+it('muestra el cambio de contrasena con el diseno de la landing y su regla de longitud', function () {
+    $user = User::factory()->role('patient')->withTemporaryPassword()->create();
+
+    $this->actingAs($user)->get(route('password.change'))
+        ->assertSuccessful()
+        ->assertSee('Psic. Andrea Morales')
+        ->assertSee('Mínimo 8 caracteres');
+});
+
+it('envia el correo de recuperacion en espanol, sin claves sin traducir', function () {
+    $notification = new ResetPassword('token');
+    $notification->url = 'https://clinica.test/restablecer';
+    $mail = $notification->toMail(User::factory()->role('patient')->create());
+
+    expect($mail->subject)->toBe('Restablece tu contraseña')
+        ->and((string) $mail->render())->toContain('¡Hola!', 'Restablecer contraseña', 'Saludos,')
+        ->and(__(Password::RESET_LINK_SENT))->not->toBe(Password::RESET_LINK_SENT);
+});
+
 it('libera el panel al guardar la contrasena nueva', function () {
     $user = User::factory()->role('admin')->withTemporaryPassword()->create();
 
