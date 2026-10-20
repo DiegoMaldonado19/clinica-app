@@ -1,0 +1,5 @@
+# Solo prod: publica el 80, que redirige a https. El pipeline lo suma con COMPOSE_FILE.
+services:
+  web:
+    ports:
+      - "80:8080"

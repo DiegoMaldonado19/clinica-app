@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,9 +16,14 @@ class DatabaseSeeder extends Seeder
             CatalogSeeder::class,
             BusinessRuleSettingsSeeder::class,
             RoleAbilitySeeder::class,
-            ClinicSeeder::class,
             NotificationTemplateSeeder::class,
         ]);
+
+        // Cada despliegue corre las semillas. Esta reescribe servicios y horario,
+        // asi que solo siembra una base que todavia no tiene la clinica.
+        if (! DB::table('therapists')->exists()) {
+            $this->call(ClinicSeeder::class);
+        }
 
         // Contrasenas conocidas solo en la maquina del desarrollador.
         if (app()->isLocal()) {

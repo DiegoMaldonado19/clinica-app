@@ -16,8 +16,6 @@ use Illuminate\Support\Str;
  */
 class ClinicSeeder extends Seeder
 {
-    public const THERAPIST_EMAIL = 'psicologa@clinica.test';
-
     private const PRICES_FROM = '2026-01-01 00:00:00';
 
     /** @var list<array{category: string, name: string, minutes: int, cents: int}> */
@@ -61,7 +59,7 @@ class ClinicSeeder extends Seeder
 
         // Nace sin contrasena utilizable: se entra por "olvide mi contrasena" o
         // con la cuenta demo en local.
-        $therapistId = $this->idOrInsert('users', ['email' => self::THERAPIST_EMAIL], [
+        $therapistId = $this->idOrInsert('users', ['email' => config('clinic.admin_email')], [
             'role_id' => DB::table('roles')->where('code', 'admin')->value('id'),
             'name' => 'Psic. Andrea Morales',
             'password' => Hash::make(Str::random(40)),

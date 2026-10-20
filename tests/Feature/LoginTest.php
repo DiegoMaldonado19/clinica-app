@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Filament\Auth\Login;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
-use Filament\Auth\Pages\Login;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
@@ -14,6 +14,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(fn () => $this->seed(DatabaseSeeder::class));
 
+// El personal de este archivo aun no configura su segundo factor: aqui se prueba
+// a que panel entra cada rol; el reto del segundo factor esta en TwoFactorTest.
 function loginOn(string $panel, string $email): Testable
 {
     Filament::setCurrentPanel(Filament::getPanel($panel));
@@ -24,7 +26,7 @@ function loginOn(string $panel, string $email): Testable
 }
 
 it('deja entrar al personal por el formulario del panel', function (string $role) {
-    $user = User::factory()->role($role)->create();
+    $user = User::factory()->role($role)->create(['two_factor_enabled' => false]);
 
     loginOn('admin', $user->email)->assertHasNoFormErrors();
 
@@ -40,7 +42,7 @@ it('deja entrar al paciente por el formulario del portal', function () {
 });
 
 it('no deja al personal entrar por el portal ni al paciente por el panel', function (string $panel, string $role) {
-    $user = User::factory()->role($role)->create();
+    $user = User::factory()->role($role)->create(['two_factor_enabled' => false]);
 
     loginOn($panel, $user->email)->assertHasFormErrors(['email']);
 
@@ -48,14 +50,14 @@ it('no deja al personal entrar por el portal ni al paciente por el panel', funct
 })->with([['portal', 'admin'], ['admin', 'patient']]);
 
 it('ignora un destino pendiente del otro panel al iniciar sesion', function () {
-    $user = User::factory()->role('admin')->create();
+    $user = User::factory()->role('admin')->create(['two_factor_enabled' => false]);
     session(['url.intended' => url('/portal')]); // visito el portal sin sesion antes de ir al panel
 
     loginOn('admin', $user->email)->assertRedirect(Filament::getPanel('admin')->getUrl());
 });
 
 it('respeta el destino pendiente dentro del mismo panel', function () {
-    $user = User::factory()->role('admin')->create();
+    $user = User::factory()->role('admin')->create(['two_factor_enabled' => false]);
     session(['url.intended' => url('/admin/payments')]);
 
     loginOn('admin', $user->email)->assertRedirect(url('/admin/payments'));

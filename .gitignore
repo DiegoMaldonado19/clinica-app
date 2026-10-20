@@ -13,6 +13,9 @@
 /.nova
 /.phpstan.cache
 /.phpunit.cache
+.terraform/
+*.tfstate
+*.tfstate.*
 /.vscode
 /.zed
 /auth.json

@@ -5,10 +5,12 @@
 .github
 .phpunit.cache
 docs
+infra
 node_modules
 public/build
 public/hot
 public/storage
+scripts
 storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*

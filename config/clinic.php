@@ -14,6 +14,9 @@ return [
     'email' => env('CLINIC_EMAIL', 'contacto@clinica.test'),
     'address' => env('CLINIC_ADDRESS', 'Ciudad de Guatemala'),
 
+    // Cuenta de la psicologa. En la nube entra la primera vez por "¿Olvidaste tu contraseña?".
+    'admin_email' => env('ADMIN_EMAIL', 'psicologa@clinica.test'),
+
     // Llave del contenido SOAP, distinta de APP_KEY (doc 05 §2.3).
     'encryption_key' => env('CLINICAL_ENCRYPTION_KEY'),
 

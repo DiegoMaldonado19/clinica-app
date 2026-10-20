@@ -1,0 +1,24 @@
+# Forma de la nube. La imagen sustituye TLS_DOMAIN al arrancar. El certificado
+# lo emite scripts/tls.sh en el host y lo comparten los tres entornos.
+
+# Solo prod publica este puerto, en el 80, para mandar a https.
+server {
+    listen 8080;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 8443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate /etc/nginx/tls/certificates/${TLS_DOMAIN}.crt;
+    ssl_certificate_key /etc/nginx/tls/certificates/${TLS_DOMAIN}.key;
+
+    # http:// al puerto de https de dev o stage vuelve como https:// al mismo puerto.
+    error_page 497 =301 https://$http_host$request_uri;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    include /etc/nginx/laravel.conf;
+}
