@@ -38,6 +38,21 @@ it('abre el CRUD de pacientes para recepcion', function () {
     $this->actingAs($secretary)->get(PatientResource::getUrl('edit', ['record' => $patient]))->assertSuccessful();
 });
 
+it('rechaza en el alta una contrasena temporal que no cumple la politica', function () {
+    $admin = User::factory()->role('admin')->create();
+
+    Livewire::actingAs($admin)
+        ->test(CreateUser::class)
+        ->fillForm([
+            'role_id' => $admin->role_id,
+            'name' => 'Recepcion Nueva',
+            'email' => 'recepcion@clinica.test',
+            'password' => 'corta',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['password']);
+});
+
 it('da de alta al usuario con credencial temporal de 72 horas', function () {
     $this->freezeTime();
 

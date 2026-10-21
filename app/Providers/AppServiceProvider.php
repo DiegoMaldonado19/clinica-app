@@ -41,6 +41,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -88,6 +89,9 @@ class AppServiceProvider extends ServiceProvider
 
         // UTC en la base; los paneles muestran y capturan en hora de Guatemala.
         FilamentTimezone::set(config('clinic.timezone'));
+
+        // Doc 05 §3.2: 12 caracteres y fuera de las filtraciones conocidas.
+        Password::defaults(fn (): Password => Password::min(12)->uncompromised());
 
         Event::subscribe(SchedulingEventSubscriber::class);
         Event::subscribe(BillingEventSubscriber::class);

@@ -38,13 +38,25 @@ RUN apk add --no-cache shadow \
 
 USER www-data
 
+# ─────────────────────────────── vendor ──────────────────────────────
+# Las dependencias de PHP en su propio destino: las usan `prod` y `assets`,
+# que compila el tema de Filament contra su CSS.
+FROM base AS vendor
+
+COPY --from=composer:2.9.8 /usr/bin/composer /usr/local/bin/composer
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
+
 # ─────────────────────────────── assets ──────────────────────────────
 FROM node:24.21.0-alpine AS assets
 
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
-COPY vite.config.js ./
+# El tema importa el CSS de Filament. Sin .gitignore, Tailwind tambien
+# recorreria vendor/ al compilar la landing (de 20 a 59 KB).
+COPY --from=vendor /var/www/html/vendor/filament ./vendor/filament
+COPY vite.config.js .gitignore ./
 COPY resources ./resources
 RUN npm run build
 
@@ -57,10 +69,7 @@ RUN printf 'opcache.enable=1\nopcache.validate_timestamps=0\nopcache.memory_cons
     > /usr/local/etc/php/conf.d/zz-opcache.ini
 
 COPY --from=composer:2.9.8 /usr/bin/composer /usr/local/bin/composer
-
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
-
+COPY --from=vendor /var/www/html/vendor ./vendor
 COPY . .
 COPY --from=assets /app/public/build ./public/build
 
@@ -69,9 +78,10 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
     && chown -R www-data:www-data storage bootstrap/cache
 
 # ──────────────────────────────── web ────────────────────────────────
-# nginx con los estaticos ya construidos. Sale del mismo build que `prod`,
+# nginx con TLS y los estaticos ya construidos. Sale del mismo build que `prod`,
 # asi que servidor web y aplicacion nunca sirven versiones distintas.
 FROM nginxinc/nginx-unprivileged:1.30.5-alpine AS web
 
-COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/laravel.conf /etc/nginx/laravel.conf
+COPY docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=prod /var/www/html/public /var/www/html/public

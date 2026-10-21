@@ -1,0 +1,36 @@
+@import '../../../vendor/filament/filament/resources/css/theme.css';
+@import '../tokens.css';
+
+@source '../../views/filament/**/*';
+
+/* La piel de la landing sobre el panel y el portal. Los tonos de cada color
+   salen de AdminPanelProvider::COLORS; aqui van forma, tipografia y superficies. */
+@theme {
+    /* Botones y campos como los de la landing; las tarjetas ya son de 12 px. */
+    --radius-lg: var(--radius-btn);
+}
+
+/* Lora solo trae el peso 600: con bold el navegador lo sintetizaria. */
+.fi-logo,
+.fi-header-heading,
+.fi-simple-header-heading {
+    @apply font-serif font-semibold;
+}
+
+.fi-logo {
+    @apply text-primary-600;
+}
+
+.fi-sidebar {
+    @apply lg:border-e lg:border-gray-200 lg:bg-white;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-topbar-item.fi-active .fi-topbar-item-btn {
+    @apply bg-primary-100;
+}
+
+/* La tarjeta del inicio de sesion y la recuperacion, como las de la landing. */
+.fi-simple-main {
+    @apply shadow-card ring-gray-300;
+}

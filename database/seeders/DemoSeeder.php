@@ -18,7 +18,7 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $accounts = [
-            ['email' => ClinicSeeder::THERAPIST_EMAIL, 'role' => 'admin',     'name' => 'Psic. Andrea Morales'],
+            ['email' => config('clinic.admin_email'),  'role' => 'admin',     'name' => 'Psic. Andrea Morales'],
             ['email' => 'recepcion@clinica.test',      'role' => 'secretary', 'name' => 'Lucía Recepción'],
             ['email' => 'paciente@clinica.test',       'role' => 'patient',   'name' => 'Ana Pérez'],
         ];

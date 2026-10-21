@@ -1,0 +1,311 @@
+name: CI/CD
+
+# PR hacia main → dev · push a main (merge del PR) → stage · despacho manual desde main → prod
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ENTORNO: ${{ github.event_name == 'pull_request' && 'dev' || github.event_name == 'push' && 'stage' || 'prod' }}
+
+jobs:
+  quality:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+
+    services:
+      mariadb:
+        image: mariadb:11.4.13
+        env:
+          MARIADB_ROOT_PASSWORD: secret
+          MARIADB_DATABASE: clinica_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7.4.11-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: clinica_test
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0        # gitleaks necesita el historial para resolver BASE^..HEAD
+
+      # El driver docker por defecto no exporta cache; buildx si (type=gha).
+      - uses: docker/setup-buildx-action@v4.4.1
+
+      # setup-php solo fija major.minor. La imagen `dev` trae la misma PHP y las
+      # mismas extensiones que produccion, sin repetir la lista aqui.
+      - name: Construir la imagen de desarrollo
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          target: dev
+          load: true
+          tags: clinica-app-dev:ci
+          cache-from: type=gha,scope=dev
+          cache-to: type=gha,mode=max,scope=dev
+
+      # Con el uid del runner para escribir en el checkout; red del host para
+      # llegar a los servicios del job.
+      - name: Arrancar el contenedor de PHP
+        run: >-
+          docker run -d --name php --network host --user "$(id -u):$(id -g)"
+          -v "$PWD":/var/www/html -e HOME=/tmp
+          -e DB_CONNECTION -e DB_HOST -e DB_PORT -e DB_DATABASE -e DB_USERNAME -e DB_PASSWORD -e REDIS_HOST -e REDIS_PORT
+          clinica-app-dev:ci tail -f /dev/null
+
+      - name: Instalar dependencias
+        run: docker exec php composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar entorno
+        run: |
+          cp .env.example .env
+          docker exec php php artisan key:generate
+
+      - name: Formato (Pint)
+        run: docker exec php vendor/bin/pint --test
+
+      - name: Analisis estatico (Larastan)
+        run: docker exec php vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      # La regla de dependencia hexagonal. Si el dominio importa el framework,
+      # este paso rompe la construccion (ADR-002, CA-24).
+      - name: Regla de arquitectura (Deptrac)
+        run: docker exec php vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
+
+      - name: Pruebas unitarias del dominio (sin base de datos)
+        run: docker exec php vendor/bin/pest --testsuite=Unit
+
+      - name: Pruebas de integracion y funcionales
+        run: |
+          docker exec php php artisan migrate --force
+          docker exec php vendor/bin/pest --testsuite=Integration,Feature
+
+      # El sistema debe seguir funcionando sin cache (ADR-008). Si algo
+      # imprescindible vive solo en Redis, este paso lo revela.
+      - name: Prueba de degradacion sin cache
+        run: docker exec -e CACHE_STORE=null php vendor/bin/pest --testsuite=Feature
+
+      - name: Dependencias con vulnerabilidades conocidas
+        run: docker exec php composer audit
+
+      - name: Escaneo de secretos
+        uses: gitleaks/gitleaks-action@v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Construye una vez y promueve la misma imagen de dev a stage y de stage a prod.
+  deliver:
+    needs: quality
+    # Prod no repite quality: despliega lo que ya paso por stage. Los PR de forks
+    # no reciben los secretos.
+    if: >-
+      !cancelled()
+      && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+      && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ github.event_name == 'pull_request' && 'dev' || github.event_name == 'push' && 'stage' || 'prod' }}
+    concurrency: deploy-${{ github.event_name }}
+    permissions:
+      contents: read
+      actions: read         # prod busca la ultima ejecucion sana de stage
+    env:
+      APP: ${{ secrets.DOCKERHUB_USERNAME }}/clinica-app
+      WEB: ${{ secrets.DOCKERHUB_USERNAME }}/clinica-web
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0        # prod resuelve el arbol de un commit anterior
+
+      # Los puertos y el dominio no son secretos: salen del nombre del entorno.
+      - name: Resolver commit y direccion del entorno
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          if [ "$ENTORNO" = prod ]; then
+            # Prod no construye: toma el ultimo commit que stage desplego y dejo sano.
+            sha=$(gh run list --workflow ci-cd.yml --branch main --event push --status success --limit 1 --json headSha --jq '.[0].headSha')
+            [ -n "$sha" ] || { echo "::error::Stage todavia no tiene un despliegue exitoso"; exit 1; }
+          else
+            sha=$GITHUB_SHA
+          fi
+          case $ENTORNO in
+            dev) port=8082 ;;
+            stage) port=8081 ;;
+            *) port=443 ;;
+          esac
+          url="https://$DOMAIN"
+          [ "$port" = 443 ] || url="$url:$port"
+          {
+            echo "sha=$sha"
+            echo "tree=$(git rev-parse "$sha^{tree}")"
+            echo "port=$port"
+            echo "url=$url"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4.4.1
+
+      # Una imagen por contenido: si el arbol ya tiene imagen, se promueve esa
+      # misma. clinica-web se publica al final, asi que marca el par completo.
+      - name: Promover la imagen de este arbol o construirla
+        id: image
+        env:
+          TREE: ${{ steps.target.outputs.tree }}
+        run: |
+          if version=$(docker buildx imagetools inspect "$WEB:tree-$TREE" --format '{{ index .Image.Config.Labels "org.opencontainers.image.version" }}' 2>/dev/null) && [ -n "$version" ]; then
+            echo "Se promueve la imagen $version"
+          elif [ "$ENTORNO" = prod ]; then
+            echo "::error::El arbol $TREE no tiene imagen: prod solo recibe imagenes que pasaron por stage"
+            exit 1
+          else
+            version=$GITHUB_RUN_NUMBER
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar clinica-app
+        if: steps.image.outputs.build
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          target: prod
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.APP }}:${{ steps.image.outputs.version }}
+            ${{ env.APP }}:tree-${{ steps.target.outputs.tree }}
+          labels: org.opencontainers.image.version=${{ steps.image.outputs.version }}
+          cache-from: type=gha,scope=prod
+          cache-to: type=gha,mode=max,scope=prod
+
+      - name: Publicar clinica-web
+        if: steps.image.outputs.build
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: docker/php/Dockerfile
+          target: web
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.WEB }}:${{ steps.image.outputs.version }}
+            ${{ env.WEB }}:tree-${{ steps.target.outputs.tree }}
+          labels: org.opencontainers.image.version=${{ steps.image.outputs.version }}
+          cache-from: type=gha,scope=prod
+
+      - name: Configurar SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/ec2 && chmod 600 ~/.ssh/ec2
+          printf 'Host ec2\n  HostName %s\n  User ubuntu\n  IdentityFile ~/.ssh/ec2\n  StrictHostKeyChecking accept-new\n' "$EC2_HOST" > ~/.ssh/config
+
+      # Comillas simples: compose no interpreta un $ dentro del valor. Lo que sale
+      # del nombre del entorno y las constantes de arquitectura no son secretos.
+      - name: Escribir el .env del entorno
+        run: |
+          cat > .env <<'EOF'
+          COMPOSE_PROJECT_NAME='clinica-${{ env.ENTORNO }}'
+          COMPOSE_FILE='${{ env.ENTORNO == 'prod' && 'compose.yaml:compose.prod.yaml' || 'compose.yaml' }}'
+          DOCKERHUB_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}'
+          IMAGE_TAG='${{ steps.image.outputs.version }}'
+          HTTPS_PORT='${{ steps.target.outputs.port }}'
+          TLS_DOMAIN='${{ vars.DOMAIN }}'
+          APP_NAME='Clínica Psicología y Bienestar'
+          APP_ENV='production'
+          APP_DEBUG='false'
+          APP_KEY='${{ secrets.APP_KEY }}'
+          APP_URL='${{ steps.target.outputs.url }}'
+          APP_LOCALE='es'
+          APP_FALLBACK_LOCALE='es'
+          LOG_CHANNEL='stderr'
+          DB_CONNECTION='mysql'
+          DB_HOST='${{ secrets.DB_HOST }}'
+          DB_PORT='3306'
+          DB_DATABASE='clinica_${{ env.ENTORNO }}'
+          DB_USERNAME='clinica_${{ env.ENTORNO }}'
+          DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+          MYSQL_ATTR_SSL_CA='/var/www/html/docker/php/rds-us-east-1.pem'
+          SESSION_DRIVER='database'
+          QUEUE_CONNECTION='database'
+          CACHE_STORE='redis'
+          SESSION_LIFETIME='480'
+          SESSION_COOKIE='clinica_${{ env.ENTORNO }}_session'
+          SESSION_SECURE_COOKIE='true'
+          REDIS_HOST='redis'
+          FILESYSTEM_DISK='s3'
+          LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK='local'
+          AWS_DEFAULT_REGION='us-east-1'
+          AWS_BUCKET='${{ secrets.AWS_BUCKET }}'
+          MAIL_MAILER='smtp'
+          MAIL_HOST='smtp.gmail.com'
+          MAIL_PORT='587'
+          MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}'
+          MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}'
+          MAIL_FROM_ADDRESS='${{ secrets.MAIL_USERNAME }}'
+          CLINICAL_ENCRYPTION_KEY='${{ secrets.CLINICAL_ENCRYPTION_KEY }}'
+          ADMIN_EMAIL='${{ secrets.ADMIN_EMAIL }}'
+          CLINIC_PHONE='${{ vars.CLINIC_PHONE }}'
+          CLINIC_EMAIL='${{ vars.CLINIC_EMAIL }}'
+          CLINIC_ADDRESS='${{ vars.CLINIC_ADDRESS }}'
+          EOF
+          # Un secreto sin definir llega vacio: mejor fallar aqui que sembrar a la psicologa sin correo.
+          if grep "=''$" .env; then echo "::error::Faltan secretos o variables del Environment"; exit 1; fi
+
+      - name: Desplegar en la EC2
+        env:
+          DIR: clinica/${{ env.ENTORNO }}
+          SHA: ${{ steps.target.outputs.sha }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          TLS_EMAIL: ${{ secrets.TLS_EMAIL }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+        run: |
+          # shellcheck disable=SC2029 # $DIR y $SHA se expanden en el runner a proposito
+          # En una EC2 recien creada el user_data puede seguir instalando Docker. Solo se
+          # espera: cloud-init sale con 2 ante avisos, y un fallo real aparece en el paso siguiente.
+          {
+            ssh ec2 "set -e; cloud-init status --wait > /dev/null || true; [ -d $DIR/.git ] || git clone -q https://github.com/$GITHUB_REPOSITORY.git $DIR; cd $DIR; git fetch -q origin $SHA; git checkout -qf FETCH_HEAD"
+            ssh ec2 "umask 077; cat > $DIR/.env" < .env
+            printf 'DUCKDNS_TOKEN=%s\nTLS_EMAIL=%s\nTLS_DOMAIN=%s\n' "$DUCKDNS_TOKEN" "$TLS_EMAIL" "$DOMAIN" |
+              ssh ec2 "umask 077; cat > clinica/tls.env && install -m 700 $DIR/scripts/tls.sh clinica/tls.sh && flock clinica/tls.lock clinica/tls.sh"
+            printf '%s\n' "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN" "DB_ADMIN_PASSWORD=$DB_ADMIN_PASSWORD" |
+              ssh ec2 "cd $DIR && scripts/deploy.sh"
+          }
+
+      - name: Verificar desde fuera
+        run: curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "${{ steps.target.outputs.url }}/up"

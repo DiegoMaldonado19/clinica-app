@@ -1,33 +1,42 @@
-# Forma de produccion: la imagen lleva el codigo dentro y no hay recarga en
-# caliente. `docker compose up` en local fusiona compose.override.yaml encima
-# y cambia el destino de construccion a `dev`; para levantar la forma real:
-#
-#     docker compose -f compose.yaml up
-#
+# Forma de la nube: un proyecto por entorno en la EC2 (~/clinica/<entorno>),
+# con las imagenes de Docker Hub y el .env que escribe el pipeline. En local,
+# compose.override.yaml se fusiona encima y da el entorno de desarrollo.
 name: clinica
 
 x-app: &app
-  image: ${APP_IMAGE:-clinica-app}:${IMAGE_TAG:-local}
+  image: ${DOCKERHUB_USERNAME:-local}/clinica-app:${IMAGE_TAG:-local}
   build:
     context: .
     dockerfile: docker/php/Dockerfile
     target: prod
   env_file: [.env]
   restart: unless-stopped
+  depends_on:
+    redis:
+      condition: service_healthy
 
 services:
   web:
-    image: ${APP_IMAGE:-clinica-app}-web:${IMAGE_TAG:-local}
+    image: ${DOCKERHUB_USERNAME:-local}/clinica-web:${IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: docker/php/Dockerfile
       target: web
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-8080}:8080"
-    depends_on: [app]
+      - "${HTTPS_PORT:-8443}:8443"
+    environment:
+      TLS_DOMAIN: ${TLS_DOMAIN:-localhost}
+    # El certificado del host, uno para los tres entornos (scripts/tls.sh).
+    volumes:
+      - ../tls:/etc/nginx/tls:ro
+    depends_on:
+      app:
+        condition: service_started
+        # nginx resuelve `app` al arrancar: si app se recrea, web se reinicia.
+        restart: true
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/up"]
+      test: ["CMD", "curl", "-fsk", "https://127.0.0.1:8443/up"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,3 +55,13 @@ services:
   scheduler:
     <<: *app
     command: php artisan schedule:work
+
+  # Solo cache (ADR-008): perderlo no pierde nada.
+  redis:
+    image: redis:7.4.11-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

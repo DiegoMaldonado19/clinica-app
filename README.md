@@ -33,7 +33,8 @@ el expediente no abre. El último comando recrea los contenedores para que la le
 
 ### Cuentas de demostración
 
-Solo con `APP_ENV=local`. La contraseña de las tres es `password`.
+Solo con `APP_ENV=local`. La contraseña de las tres es `password`. El personal configura su
+segundo factor la primera vez que entra al panel; el código por correo llega a Mailpit.
 
 | Perfil | Correo |
 |---|---|
@@ -65,6 +66,27 @@ app/                           Laravel: paneles Filament, Livewire, modelos de l
 
 Contextos: `Scheduling`, `Billing`, `ClinicalRecords`, `Identity`, `Notifications`, `Shared`.
 Se comunican solo por eventos de dominio.
+
+## Despliegue en la nube
+
+Una EC2 en AWS con los tres entornos, una RDS MariaDB con una base por entorno y un bucket S3
+privado por entorno. Todo se crea con Terraform (`infra/`) y se despliega con GitHub Actions:
+
+| Evento | Entorno | URL |
+|---|---|---|
+| Pull Request hacia `main` | dev | `https://<dominio>:8082` |
+| Merge a `main` | stage | `https://<dominio>:8081` |
+| Despacho manual de `CI/CD` desde `main`, con aprobación | prod | `https://<dominio>` |
+
+- `ci-cd.yml` construye la imagen una vez por árbol de git y promueve esa misma imagen de dev a
+  stage y a prod. Prod nunca construye: recibe lo último que stage desplegó sano.
+- `infra.yml` corre `plan` o `apply` solo a mano, desde `main` y con aprobación, con credenciales
+  de AWS por OIDC. Ningún evento del repositorio toca la infraestructura.
+- `scripts/deploy.sh` y `scripts/tls.sh` corren en la EC2: base y usuario del entorno,
+  migraciones, contenedores y el certificado de Let's Encrypt.
+
+Los pasos del primer despliegue y los secretos de cada Environment están en
+[`infra/README.md`](infra/README.md).
 
 ## Tecnologías y versiones
 
@@ -102,15 +124,27 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | `redis:7.4.11-alpine` | Caché en local y en la CI |
 | `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` | S3 en local; con su `mc` se crea el bucket |
 | `axllent/mailpit:v1.31.3` | Correo capturado en local |
+| `goacme/lego:v4.35.2` | Certificado de Let's Encrypt en la EC2 |
 
-**GitHub Actions**
+**Nube**
+
+| Tecnología | Versión |
+|---|---|
+| Terraform · proveedor `hashicorp/aws` | 1.16.6 · 6.69.1 |
+| RDS MariaDB | 11.4.13 |
+| EC2: Ubuntu 24.04 (AMI `20261004`) · Docker · Compose | 29.9.1 · 5.6.0 |
+
+**GitHub Actions** (runner `ubuntu-24.04`)
 
 | Action | Versión |
 |---|---|
 | `actions/checkout` | v7.0.1 |
 | `docker/setup-buildx-action` | v4.4.1 |
 | `docker/build-push-action` | v7.4.0 |
+| `docker/login-action` | v4.6.0 |
 | `gitleaks/gitleaks-action` | v3.0.0 |
+| `hashicorp/setup-terraform` | v4.0.1 |
+| `aws-actions/configure-aws-credentials` | v6.3.0 |
 
 ## Documentación
 

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Login;
 use App\Filament\Auth\RequestPasswordReset;
 use App\Filament\Portal\Pages\MyAppointments;
 use App\Http\Middleware\EnforceTemporaryPassword;
@@ -13,7 +14,6 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -34,10 +34,12 @@ class PortalPanelProvider extends PanelProvider
         return $panel
             ->id('portal')
             ->path('portal')
-            ->login()
+            ->tap(AdminPanelProvider::theme(...))
+            ->login(Login::class)
             ->passwordReset(RequestPasswordReset::class)
-            ->brandName('Mi portal')
-            ->colors(array_map(Color::hex(...), AdminPanelProvider::COLORS))
+            ->profile()
+            ->emailChangeVerification()
+            ->multiFactorAuthentication(AdminPanelProvider::secondFactors())
             ->topNavigation()
             ->pages([MyAppointments::class])
             ->homeUrl(fn (): string => MyAppointments::getUrl())

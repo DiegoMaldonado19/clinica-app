@@ -4,6 +4,7 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -25,5 +26,9 @@ abstract class TestCase extends BaseTestCase
         // La suite prueba HTML, no el empaquetado: sin esto las vistas con @vite
         // revientan donde no hay `npm run build` (la tuberia no construye el front).
         $this->withoutVite();
+
+        // Password::defaults() consulta la API de contrasenas filtradas: la suite
+        // no sale a Internet y ninguna contrasena de prueba aparece filtrada.
+        Http::fake(['api.pwnedpasswords.com/*' => Http::response()]);
     }
 }

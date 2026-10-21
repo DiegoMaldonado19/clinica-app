@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -104,7 +105,22 @@ it('muestra el cambio de contrasena con el diseno de la landing y su regla de lo
     $this->actingAs($user)->get(route('password.change'))
         ->assertSuccessful()
         ->assertSee('Psic. Andrea Morales')
-        ->assertSee('Mínimo 8 caracteres');
+        ->assertSee('Mínimo 12 caracteres');
+});
+
+it('rechaza una contrasena de menos de 12 caracteres', function () {
+    $user = User::factory()->role('patient')->withTemporaryPassword()->create();
+
+    $this->actingAs($user)
+        ->post(route('password.change.update'), ['password' => 'Corta-12345', 'password_confirmation' => 'Corta-12345'])
+        ->assertSessionHasErrors('password');
+
+    expect($user->refresh()->must_change_password)->toBeTrue();
+});
+
+// La consulta a la API de filtraciones la hace Laravel; aqui se prueba que la regla por defecto la exige (doc 05 §3.2).
+it('exige que la contrasena no aparezca en filtraciones conocidas', function () {
+    expect(PasswordRule::defaults()->appliedRules())->toMatchArray(['min' => 12, 'uncompromised' => true]);
 });
 
 it('envia el correo de recuperacion en espanol, sin claves sin traducir', function () {

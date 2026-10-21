@@ -4,6 +4,11 @@ namespace App\Models;
 
 use App\Auth\AbilityMatrix;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -22,16 +27,17 @@ use Illuminate\Support\Carbon;
  * @property bool $must_change_password
  * @property Carbon|null $temp_password_expires_at
  * @property bool $is_active
+ * @property bool $two_factor_enabled
  */
 #[Fillable([
     'role_id', 'name', 'email', 'phone_e164', 'password',
     'must_change_password', 'temp_password_expires_at', 'is_active',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable;
+    use HasFactory, HasUuids, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery, Notifiable;
 
     /** El personal entra al panel; el paciente, solo a su portal. */
     private const PANEL_ROLES = [
@@ -67,6 +73,17 @@ class User extends Authenticatable implements FilamentUser
         $panelId = collect(self::PANEL_ROLES)->search(fn (array $roles): bool => in_array($this->role->code, $roles, true));
 
         return Filament::getPanel($panelId ?: null);
+    }
+
+    /** El codigo por correo de la MFA de Filament, sobre la columna que ya existia. */
+    public function hasEmailAuthentication(): bool
+    {
+        return $this->two_factor_enabled;
+    }
+
+    public function toggleEmailAuthentication(bool $condition): void
+    {
+        $this->forceFill(['two_factor_enabled' => $condition])->save();
     }
 
     /**

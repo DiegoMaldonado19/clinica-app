@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class UserForm
 {
@@ -25,6 +26,7 @@ class UserForm
                     ->label('Contrasena temporal')
                     ->password()
                     ->revealable()
+                    ->rule(Password::defaults())
                     ->dehydrated(fn (?string $state): bool => filled($state))
                     ->required(fn (string $operation): bool => $operation === 'create'),
                 Toggle::make('is_active')

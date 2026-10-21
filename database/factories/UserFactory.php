@@ -32,9 +32,13 @@ class UserFactory extends Factory
         ];
     }
 
+    /** El personal no usa el panel sin segundo factor (HU-21): aqui ya lo trae activo. */
     public function role(string $code): static
     {
-        return $this->state(fn (): array => ['role_id' => $this->roleId($code)]);
+        return $this->state(fn (): array => [
+            'role_id' => $this->roleId($code),
+            'two_factor_enabled' => $code !== 'patient',
+        ]);
     }
 
     /** RN-15: credencial temporal con TTL y cambio obligatorio. */
