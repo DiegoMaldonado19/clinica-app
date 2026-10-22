@@ -2,10 +2,18 @@
 
 namespace App\Providers;
 
+use App\Analytics\Domain\Port\MetricsSource;
+use App\Analytics\Domain\Port\ReportExporter;
+use App\Analytics\Infrastructure\DatabaseMetricsSource;
+use App\Analytics\Infrastructure\ReportFileExporter;
 use App\Auth\AbilityMatrix;
+use App\Billing\Domain\Port\FiscalDocumentIssuer;
+use App\Billing\Domain\Port\PaymentGateway;
 use App\Billing\Domain\Port\PaymentRepository;
 use App\Billing\Infrastructure\BillingEventSubscriber;
 use App\Billing\Infrastructure\DatabasePaymentRepository;
+use App\Billing\Infrastructure\NullFiscalDocumentIssuer;
+use App\Billing\Infrastructure\NullPaymentGateway;
 use App\ClinicalRecords\Domain\Port\ClinicalNoteRepository;
 use App\ClinicalRecords\Infrastructure\ClinicalCipher;
 use App\ClinicalRecords\Infrastructure\DatabaseClinicalNoteRepository;
@@ -16,6 +24,9 @@ use App\Listeners\DomainEventNotifier;
 use App\Models\User;
 use App\Notifications\Domain\Port\NotificationChannel;
 use App\Notifications\Infrastructure\MailChannel;
+use App\Notifications\Infrastructure\NotificationDispatcher;
+use App\Notifications\Infrastructure\NotificationPreferences;
+use App\Notifications\Infrastructure\WhatsAppChannel;
 use App\Scheduling\Application\SchedulingPolicies;
 use App\Scheduling\Domain\Port\AppointmentRepository;
 use App\Scheduling\Domain\Port\AvailabilityProvider;
@@ -37,9 +48,11 @@ use App\Support\BusinessRuleSettings;
 use DateTimeZone;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Support\Facades\FilamentTimezone;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -64,7 +77,11 @@ class AppServiceProvider extends ServiceProvider
         ServiceCatalog::class => DatabaseServiceCatalog::class,
         PatientRegistry::class => DatabasePatientRegistry::class,
         PaymentRepository::class => DatabasePaymentRepository::class,
+        FiscalDocumentIssuer::class => NullFiscalDocumentIssuer::class,
+        PaymentGateway::class => NullPaymentGateway::class,
         ClinicalNoteRepository::class => DatabaseClinicalNoteRepository::class,
+        MetricsSource::class => DatabaseMetricsSource::class,
+        ReportExporter::class => ReportFileExporter::class,
         LoginResponse::class => PanelLoginResponse::class,
     ];
 
@@ -73,6 +90,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SchedulingPolicies::class, fn ($app) => new SchedulingPolicies(
             $app->make(BusinessRules::class),
             new DateTimeZone(config('clinic.timezone')),
+        ));
+
+        // El correo siempre; WhatsApp solo si esta configurado (F3-07).
+        $this->app->bind(NotificationDispatcher::class, fn ($app) => new NotificationDispatcher(
+            array_values(array_filter([$app->make(NotificationChannel::class), WhatsAppChannel::configured() ? $app->make(WhatsAppChannel::class) : null])),
+            $app->make(NotificationPreferences::class),
+            $app->make(BusinessRules::class),
+            $app->make(Catalog::class),
+            $app->make(ClockInterface::class),
         ));
     }
 
@@ -92,6 +118,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Doc 05 §3.2: 12 caracteres y fuera de las filtraciones conocidas.
         Password::defaults(fn (): Password => Password::min(12)->uncompromised());
+
+        // La API del asistente tiene un solo cliente; el límite por persona lo pone el widget.
+        RateLimiter::for('chatbot', fn (): Limit => Limit::perMinute(60));
 
         Event::subscribe(SchedulingEventSubscriber::class);
         Event::subscribe(BillingEventSubscriber::class);

@@ -47,7 +47,7 @@ final readonly class BookingService
 
             $appointment = Appointment::request(
                 $this->appointments->nextId(), $patientId, $command->therapistId, $command->serviceId,
-                $slot, $fee, BookingSource::WEB,
+                $slot, $fee, $command->source,
                 $this->policies->bookingWindow(), $this->policies->approvalSla(), $this->clock,
             );
 
@@ -69,6 +69,34 @@ final readonly class BookingService
             $this->appointments->nextId(), $patientId, $therapistId, $serviceId, $slot, $fee,
             $source, $bookedBy, $this->policies->paymentDeadlineHours(), $this->clock,
         )));
+    }
+
+    /**
+     * RF-28 · to-be-04, dentro de la transaccion del llamador: se cancela con el
+     * tramo de RN-06, o sin cargo si la psicologa no puede (RN-18), y la nueva nace
+     * aprobada con la tarifa original. Lo pagado vuelve como credito y Billing lo
+     * aplica a la nueva en el acto (RN-16).
+     */
+    public function reschedule(string $appointmentId, DateTimeImmutable $startsAt, string $requestedBy, bool $byTherapist = false, bool $assisted = true): string
+    {
+        $current = $this->appointments->find($appointmentId) ?? throw new DomainException('La cita no existe.');
+        [$slot] = $this->offeredSlot($current->serviceId, $current->therapistId, $startsAt);
+
+        if (! $assisted) {
+            $this->policies->bookingWindow()->assertBookable($slot, $this->clock->now());
+        }
+
+        return $this->locks->exclusively($current->therapistId, $slot, function () use ($current, $slot, $requestedBy, $byTherapist): string {
+            $byTherapist
+                ? $current->cancelByTherapist($requestedBy, $this->clock)
+                : $current->cancel($this->policies->cancellation(), $this->clock, $requestedBy);
+            $this->persist($current);
+
+            return $this->persist(Appointment::bookAssisted(
+                $this->appointments->nextId(), $current->patientId, $current->therapistId, $current->serviceId, $slot, $current->fee,
+                $current->source, $requestedBy, $this->policies->paymentDeadlineHours(), $this->clock, $current->id,
+            ));
+        });
     }
 
     /**

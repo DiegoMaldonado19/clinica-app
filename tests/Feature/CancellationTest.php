@@ -25,16 +25,6 @@ beforeEach(function () {
     $this->transitions->approve($this->id, $this->staff->id);
 });
 
-function payAndBook(string $appointmentId, string $staffId): void
-{
-    $billing = app(BillingService::class);
-    $billing->submitProof($appointmentId, new PaymentProof(
-        (string) random_int(1, 999999), (int) DB::table('banks')->value('id'), '4471',
-        new DateTimeImmutable('2026-09-15'), 'comprobantes/x.pdf', str_repeat('b', 64), 1000,
-    ));
-    $billing->approve((string) DB::table('payments')->where('appointment_id', $appointmentId)->value('id'), $staffId);
-}
-
 function creditCents(): int
 {
     return (int) DB::table('patient_credits')->sum('amount_cents');

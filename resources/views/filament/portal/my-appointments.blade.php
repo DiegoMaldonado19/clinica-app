@@ -2,10 +2,14 @@
     @if ($pending = $this->pendingPayment())
         @php
             $minutes = max(0, (int) now()->diffInMinutes($pending->payment_due_at, false));
+            $due = $pending->sessionPayment()?->amount_cents ?? $pending->fee_amount_cents;
         @endphp
         <x-filament::section icon="heroicon-o-clock" icon-color="warning" heading="Tienes 1 pago pendiente">
             <p style="font-weight: 600;">{{ $pending->service->name }}</p>
-            <p>{{ ucfirst($pending->starts_at->tz(config('clinic.timezone'))->locale('es')->translatedFormat('l j \d\e F · H:i')) }} · {{ \App\Shared\Domain\ValueObject\Money::gtq($pending->fee_amount_cents)->format() }}</p>
+            <p>{{ ucfirst($pending->starts_at->tz(config('clinic.timezone'))->locale('es')->translatedFormat('l j \d\e F · H:i')) }} · {{ \App\Shared\Domain\ValueObject\Money::gtq($due)->format() }}</p>
+            @if ($due < $pending->fee_amount_cents)
+                <p style="font-size: .875rem;">Aplicamos {{ \App\Shared\Domain\ValueObject\Money::gtq($pending->fee_amount_cents - $due)->format() }} de tu crédito a favor.</p>
+            @endif
             <p style="margin-top: .5rem;">
                 <strong>Quedan {{ intdiv($minutes, 60) }} h {{ $minutes % 60 }} min para registrar tu pago.</strong>
                 Después de ese tiempo el horario se libera.

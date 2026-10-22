@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Billing\Application\BillingService;
 use App\Billing\Domain\DuplicateReceipt;
 use App\Billing\Domain\PaymentProof;
+use App\Billing\Domain\Port\FiscalDocumentIssuer;
 use App\Models\User;
 use App\Scheduling\Application\AppointmentTransitions;
 use Database\Seeders\DatabaseSeeder;
@@ -100,4 +101,23 @@ it('cobra en caja al registrar la llegada', function () {
     expect(statusOf($this->id))->toBe('EN_CURSO')
         ->and(DB::table('payments')->where('appointment_id', $this->id)->value('status_id'))
         ->toBe(DB::table('payment_statuses')->where('code', 'APROBADO')->value('id'));
+});
+
+it('pasa cada pago aprobado por el emisor fiscal: hoy el nulo, mañana uno real (FEL)', function () {
+    $issuer = new class implements FiscalDocumentIssuer
+    {
+        /** @var list<string> */
+        public array $payments = [];
+
+        public function issueFor(string $paymentId): void
+        {
+            $this->payments[] = $paymentId;
+        }
+    };
+    app()->instance(FiscalDocumentIssuer::class, $issuer);
+
+    payAndBook($this->id, $this->staff->id);
+
+    expect($issuer->payments)->toBe([DB::table('payments')->where('appointment_id', $this->id)->value('id')])
+        ->and(statusOf($this->id))->toBe('AGENDADA');
 });

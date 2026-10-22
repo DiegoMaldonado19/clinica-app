@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Faq;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,12 @@ it('refleja en la landing un cambio de la politica sin desplegar', function () {
     ]);
 
     $this->get('/')->assertSuccessful()->assertSee('48 horas o más de anticipación')->assertSee('Entre 48 horas y 2 horas');
+});
+
+it('muestra la FAQ que edita la psicologa, la misma que lee el asistente (HU-24)', function () {
+    Faq::query()->where('question', '¿Atienden a adolescentes?')->update(['answer' => 'Sí, desde los 13 años.']);
+
+    $this->get('/')->assertSuccessful()->assertSeeInOrder(['¿Cómo es la primera cita?', 'Sí, desde los 13 años.', '¿Cómo se realiza el pago?']);
 });
 
 it('abre el wizard de agendamiento', function () {

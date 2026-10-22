@@ -53,6 +53,7 @@ final class Appointment
         private ?DateTimeImmutable $paymentDueAt = null,
         private ?string $approvedBy = null,
         private ?string $rejectionReason = null,
+        public readonly ?string $rescheduledFromId = null,
     ) {}
 
     /** to-be-01: solicitud en linea, sujeta a RN-01/RN-02 y con HOLD durante el SLA. */
@@ -94,8 +95,12 @@ final class Appointment
         string $bookedBy,
         int $paymentDeadlineHours,
         ClockInterface $clock,
+        ?string $rescheduledFromId = null,
     ): self {
-        $appointment = new self($id, $patientId, $therapistId, $serviceId, $slot, $fee, $source, AppointmentStatus::SOLICITADA);
+        $appointment = new self(
+            $id, $patientId, $therapistId, $serviceId, $slot, $fee, $source, AppointmentStatus::SOLICITADA,
+            rescheduledFromId: $rescheduledFromId,
+        );
         $appointment->record(null, AppointmentStatus::SOLICITADA, $bookedBy, null, $clock->now());
         $appointment->approve($bookedBy, $paymentDeadlineHours, $clock);
 
@@ -122,10 +127,11 @@ final class Appointment
         ?DateTimeImmutable $paymentDueAt,
         ?string $approvedBy,
         ?string $rejectionReason,
+        ?string $rescheduledFromId = null,
     ): self {
         return new self(
             $id, $patientId, $therapistId, $serviceId, $slot, $fee, $source,
-            $status, $holdExpiresAt, $paymentDueAt, $approvedBy, $rejectionReason,
+            $status, $holdExpiresAt, $paymentDueAt, $approvedBy, $rejectionReason, $rescheduledFromId,
         );
     }
 
@@ -191,6 +197,19 @@ final class Appointment
     {
         $this->transition(AppointmentStatus::AGENDADA, null, null, $clock->now());
         $this->events[] = new AppointmentFullyBooked($this->id, $this->patientId, $clock->now());
+    }
+
+    /**
+     * RN-16: el credito a favor cubrio la tarifa y no hay comprobante que revisar.
+     * Usa las transiciones que ya existen: una cita por pagar pasa por PAGO_EN_REVISION.
+     */
+    public function confirmPaymentByCredit(ClockInterface $clock): void
+    {
+        if ($this->status === AppointmentStatus::CONFIRMADA_PENDIENTE_PAGO) {
+            $this->transition(AppointmentStatus::PAGO_EN_REVISION, null, 'Crédito a favor', $clock->now());
+        }
+
+        $this->confirmPayment($clock);
     }
 
     /** RN-05: un comprobante en revision no detiene el reloj; el pago en caja si. */

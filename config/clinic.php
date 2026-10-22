@@ -14,6 +14,9 @@ return [
     'email' => env('CLINIC_EMAIL', 'contacto@clinica.test'),
     'address' => env('CLINIC_ADDRESS', 'Ciudad de Guatemala'),
 
+    // RF-62. El de serie es el marcador del mockup: en la nube, CLINIC_CRISIS_LINE es obligatoria.
+    'crisis_line' => env('CLINIC_CRISIS_LINE', '1-800-000-0000'),
+
     // Cuenta de la psicologa. En la nube entra la primera vez por "¿Olvidaste tu contraseña?".
     'admin_email' => env('ADMIN_EMAIL', 'psicologa@clinica.test'),
 
@@ -30,6 +33,7 @@ return [
         ],
         'PRIVACIDAD' => [
             '2026-09' => 'Tus datos se usan solo para coordinar tu atención. El contenido clínico está cifrado y solo la psicóloga tiene acceso a él.',
+            '2026-10' => 'Tus datos se usan para coordinar tu atención. Si escribes al asistente del sitio, tus mensajes los procesa un proveedor de inteligencia artificial y no se guardan en tu expediente. El contenido clínico está cifrado y solo la psicóloga tiene acceso a él.',
         ],
     ],
 ];

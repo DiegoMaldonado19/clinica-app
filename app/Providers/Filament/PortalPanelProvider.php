@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
 use App\Filament\Auth\RequestPasswordReset;
+use App\Filament\Portal\Pages\EditProfile;
 use App\Filament\Portal\Pages\MyAppointments;
 use App\Http\Middleware\EnforceTemporaryPassword;
 use App\Http\Middleware\ShortenPortalSession;
@@ -37,7 +38,7 @@ class PortalPanelProvider extends PanelProvider
             ->tap(AdminPanelProvider::theme(...))
             ->login(Login::class)
             ->passwordReset(RequestPasswordReset::class)
-            ->profile()
+            ->profile(EditProfile::class)
             ->emailChangeVerification()
             ->multiFactorAuthentication(AdminPanelProvider::secondFactors())
             ->topNavigation()

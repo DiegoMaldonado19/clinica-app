@@ -56,6 +56,23 @@ services:
     <<: *app
     command: php artisan schedule:work
 
+  # El asistente (F3-06). Sin puertos publicados: solo Laravel le habla, y el
+  # llama a la API por la escucha interna de nginx. Recibe solo lo que usa.
+  chatbot:
+    image: ${DOCKERHUB_USERNAME:-local}/clinica-chatbot:${IMAGE_TAG:-local}
+    build:
+      context: chatbot
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CHATBOT_API_TOKEN: ${CHATBOT_API_TOKEN:-}
+      LARAVEL_API_URL: http://web:8000/api/v1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Solo cache (ADR-008): perderlo no pierde nada.
   redis:
     image: redis:7.4.11-alpine

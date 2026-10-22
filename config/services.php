@@ -28,6 +28,21 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // F3-06: el asistente es interno a la red de compose; el mismo token protege los dos sentidos.
+    'chatbot' => [
+        'url' => env('CHATBOT_URL', 'http://chatbot:8000'),
+        'token' => env('CHATBOT_API_TOKEN'),
+    ],
+
+    // F3-07: listo sin configurar. Sin token ni numero, el canal no existe y todo sale por correo.
+    'whatsapp' => [
+        'token' => env('WHATSAPP_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'template' => 'aviso_clinica',
+        'language' => 'es',
+        'version' => env('WHATSAPP_API_VERSION', 'v26.0'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

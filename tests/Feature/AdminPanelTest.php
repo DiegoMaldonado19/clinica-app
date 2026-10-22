@@ -7,6 +7,7 @@ use App\Filament\Pages\BusinessRules;
 use App\Filament\Resources\Appointments\AppointmentResource;
 use App\Filament\Resources\Appointments\Pages\CreateAppointment;
 use App\Filament\Resources\AuditLogEntries\AuditLogEntryResource;
+use App\Filament\Resources\Faqs\FaqResource;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Filament\Resources\ScheduleBlocks\Pages\CreateScheduleBlock;
 use App\Filament\Resources\ScheduleBlocks\ScheduleBlockResource;
@@ -41,6 +42,7 @@ it('abre cada pantalla del panel a la administradora', function () {
         ApprovalInbox::getUrl(), AppointmentResource::getUrl('index'), AppointmentResource::getUrl('view', ['record' => $id]),
         AppointmentResource::getUrl('create'), PaymentResource::getUrl('index'), ScheduleBlockResource::getUrl('index'),
         ServiceResource::getUrl('index'), BusinessRules::getUrl(), AuditLogEntryResource::getUrl('index'),
+        FaqResource::getUrl('index'),
     ] as $url) {
         $this->actingAs($this->admin)->get($url)->assertSuccessful();
     }
@@ -53,6 +55,7 @@ it('niega a recepcion lo que es exclusivo de la psicologa (doc 05 §4.3)', funct
     'tarifas' => fn () => ServiceResource::getUrl('index'),
     'parametros' => fn () => BusinessRules::getUrl(),
     'bitacora' => fn () => AuditLogEntryResource::getUrl('index'),
+    'preguntas frecuentes' => fn () => FaqResource::getUrl('index'),
 ]);
 
 it('ordena la bandeja por el SLA que queda y aprueba desde ella (HU-04)', function () {

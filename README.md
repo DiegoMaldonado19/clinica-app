@@ -1,10 +1,13 @@
 # BPMS · Clínica de psicología
 
 Sistema de gestión de procesos para una clínica de psicología de una sola profesional:
-agendamiento en línea con aprobación por SLA, pagos con conciliación humana, cancelación con
-política escalonada, expediente clínico con nota SOAP inmutable y bitácora de accesos.
+agendamiento en línea con aprobación por SLA, pagos con conciliación humana, cancelación y
+reprogramación con política escalonada y crédito a favor, expediente clínico con nota SOAP
+inmutable, bitácora de accesos, tablero de indicadores con exportación a Excel y PDF, y un
+asistente conversacional que responde con fuente, agenda y escala las crisis.
 
-Laravel 13 · Filament 5 · Livewire 4 · MariaDB 11.4 · Redis 7 · MinIO (S3) · Mailpit.
+Laravel 13 · Filament 5 · Livewire 4 · MariaDB 11.4 · Redis 7 · MinIO (S3) · Mailpit, y el
+asistente en Python 3.13 con FastAPI y Claude Haiku 5.5.
 El diseño completo está en `../Entregable_2_Final/`; el plan y el estado de la Fase 2, en
 [`docs/fase-2/`](docs/fase-2/).
 
@@ -31,6 +34,10 @@ el expediente no abre. El último comando recrea los contenedores para que la le
 | Correo capturado (Mailpit) | http://localhost:8025 |
 | Consola de MinIO | http://localhost:9001 |
 
+El asistente (`chatbot/`) no publica puertos: el widget de la landing le habla desde Laravel. Sin
+`ANTHROPIC_API_KEY` en el `.env`, solo responde la rama de crisis y en lo demás el widget ofrece
+el teléfono de la clínica. En local, el token entre Laravel y el asistente tiene un valor de serie.
+
 ### Cuentas de demostración
 
 Solo con `APP_ENV=local`. La contraseña de las tres es `password`. El personal configura su
@@ -55,6 +62,15 @@ docker compose exec -e CACHE_STORE=null app vendor/bin/pest --testsuite=Feature 
 `vendor/bin/pest --testsuite=Unit` prueba el dominio sin base de datos ni framework: son las
 reglas RN-xx y la máquina de 13 estados de la cita.
 
+El asistente se verifica como en la CI, dentro de su imagen de Python y sin dejar archivos en el
+repositorio. `pytest` incluye la batería de 20 casos de crisis:
+
+```bash
+docker run --rm -v "$PWD/chatbot:/src:ro" python:3.13.16-slim-trixie sh -c 'cp -r /src /tmp/chatbot && cd /tmp/chatbot \
+  && pip install -q --root-user-action=ignore --disable-pip-version-check -r requirements-dev.txt \
+  && ruff format --check . && ruff check . && mypy app tests && pytest && pip-audit -r requirements.txt'
+```
+
 ## Estructura
 
 ```
@@ -62,10 +78,12 @@ src/<Contexto>/Domain          reglas de negocio, sin Illuminate\* (Deptrac lo v
 src/<Contexto>/Application     orquestación de los casos de uso
 src/<Contexto>/Infrastructure  adaptadores: base de datos, colas, correo, candados
 app/                           Laravel: paneles Filament, Livewire, modelos de lectura
+chatbot/                       el asistente: FastAPI, clasificador de crisis y cliente de la API
+docs/api/openapi.yaml          contrato de la API /api/v1 que usa el asistente
 ```
 
-Contextos: `Scheduling`, `Billing`, `ClinicalRecords`, `Identity`, `Notifications`, `Shared`.
-Se comunican solo por eventos de dominio.
+Contextos: `Scheduling`, `Billing`, `ClinicalRecords`, `Identity`, `Notifications`, `Analytics`,
+`Shared`. Se comunican solo por eventos de dominio; `Analytics` solo lee.
 
 ## Despliegue en la nube
 
@@ -78,8 +96,9 @@ privado por entorno. Todo se crea con Terraform (`infra/`) y se despliega con Gi
 | Merge a `main` | stage | `https://<dominio>:8081` |
 | Despacho manual de `CI/CD` desde `main`, con aprobación | prod | `https://<dominio>` |
 
-- `ci-cd.yml` construye la imagen una vez por árbol de git y promueve esa misma imagen de dev a
-  stage y a prod. Prod nunca construye: recibe lo último que stage desplegó sano.
+- `ci-cd.yml` construye las imágenes (`clinica-app`, `clinica-chatbot` y `clinica-web`) una vez
+  por árbol de git y promueve esas mismas de dev a stage y a prod. Prod nunca construye: recibe
+  lo último que stage desplegó sano.
 - `infra.yml` corre `plan` o `apply` solo a mano, desde `main` y con aprobación, con credenciales
   de AWS por OIDC. Ningún evento del repositorio toca la infraestructura.
 - `scripts/deploy.sh` y `scripts/tls.sh` corren en la EC2: base y usuario del entorno,
@@ -101,6 +120,17 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | Filament | 5.8.4 |
 | Livewire | 4.4.0 |
 | Vite · Tailwind CSS | 8.2.2 · 4.3.3 |
+| laravel-dompdf · dompdf (PDF) | 3.1.2 · 3.1.6 |
+| OpenSpout (XLSX) | 4.32.0 |
+
+**Asistente** (`chatbot/requirements.txt` fija también las transitivas)
+
+| Tecnología | Versión |
+|---|---|
+| Python | 3.13.16 |
+| FastAPI · uvicorn | 0.142.4 · 0.54.0 |
+| SDK `anthropic` · modelo | 1.12.1 · `claude-haiku-5-5` |
+| pytest · ruff · mypy · pip-audit | 9.1.1 · 0.17.0 · 2.4.0 · 2.10.1 |
 
 **Pruebas y calidad**
 
@@ -124,6 +154,7 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | `redis:7.4.11-alpine` | Caché en local y en la CI |
 | `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` | S3 en local; con su `mc` se crea el bucket |
 | `axllent/mailpit:v1.31.3` | Correo capturado en local |
+| `python:3.13.16-slim-trixie` | El asistente y su job de la CI |
 | `goacme/lego:v4.35.2` | Certificado de Let's Encrypt en la EC2 |
 
 **Nube**
@@ -155,3 +186,4 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | [`docs/fase-2/03`](docs/fase-2/03-requisitos-de-la-fase.md) | Qué exige la fase y dónde quedó cada punto |
 | [`docs/fase-2/04`](docs/fase-2/04-manual-de-usuario.md) | Manual de usuario |
 | [`docs/fase-2/05`](docs/fase-2/05-documentacion-de-usuario.md) | Qué ve y qué puede hacer cada perfil |
+| [`docs/api/openapi.yaml`](docs/api/openapi.yaml) | Contrato de la API del asistente (OpenAPI 3.1) |

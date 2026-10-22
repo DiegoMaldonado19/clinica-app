@@ -6,15 +6,23 @@ namespace App\Filament\Actions;
 
 use App\Filament\Pages\SessionNote;
 use App\Filament\Support\DomainCommand;
+use App\Filament\Support\SlotOptions;
 use App\Models\Appointment;
 use App\Scheduling\Application\AppointmentTransitions;
+use App\Scheduling\Application\BookingService;
 use App\Shared\Infrastructure\Audit\AuditLog;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 
 /**
  * Las transiciones de la cita como acciones de Filament. Cada una comprueba su
@@ -124,6 +132,67 @@ final class AppointmentActions
                 $t->cancelByTherapist($record->id, self::userId());
                 AuditLog::record('appointment.cancelled', 'appointment', $record->id, ['by_therapist' => true]);
             }, 'Cita cancelada sin cargo.'));
+    }
+
+    /** RF-28: a pedido del paciente, con el tramo de RN-06; lo pagado pasa a la cita nueva. */
+    public static function reschedule(): Action
+    {
+        return Action::make('reschedule')
+            ->label('Reprogramar a solicitud del paciente')
+            ->icon(Heroicon::OutlinedArrowPath)
+            ->color('gray')
+            ->modalDescription(fn (Appointment $record): string => 'Reprogramar cancela esta cita y agenda la nueva. '.self::cancellationPreview($record))
+            ->visible(fn (Appointment $record): bool => $record->isCancellable() && self::can('appointment.cancel.any'))
+            ->schema(fn (Appointment $record): array => self::rescheduleFields($record, assisted: true))
+            ->action(fn (Appointment $record, array $data) => self::rescheduleTo($record->id, $data, byTherapist: false, assisted: true, success: 'Cita reprogramada.'));
+    }
+
+    /** RN-18: la indisponibilidad de la psicologa nunca le cuesta al paciente. */
+    public static function rescheduleByTherapist(): Action
+    {
+        return Action::make('rescheduleByTherapist')
+            ->label('Reprogramar por indisponibilidad')
+            ->icon(Heroicon::OutlinedArrowPath)
+            ->color('gray')
+            ->modalDescription('Sin cargo: lo que ya pagó pasa completo a la cita nueva. El paciente recibe un aviso.')
+            ->visible(fn (Appointment $record): bool => $record->isCancellable() && self::can('schedule.block'))
+            ->schema(fn (Appointment $record): array => self::rescheduleFields($record, assisted: true))
+            ->action(fn (Appointment $record, array $data) => self::rescheduleTo($record->id, $data, byTherapist: true, assisted: true, success: 'Cita reprogramada sin cargo.'));
+    }
+
+    /**
+     * La fecha y una hora que el calendario ofrece; recepcion puede el mismo dia.
+     *
+     * @return list<Component>
+     */
+    public static function rescheduleFields(Appointment $record, bool $assisted): array
+    {
+        $times = fn (Get $get): array => SlotOptions::for($record->service_id, $get('date'), $assisted);
+
+        return [
+            DatePicker::make('date')->label('Nueva fecha')
+                ->minDate(now(config('clinic.timezone'))->startOfDay()->addDays($assisted ? 0 : 1))
+                ->native(false)
+                ->required()
+                ->live()
+                ->afterStateUpdated(fn (Set $set) => $set('starts_at', null)),
+            Select::make('starts_at')->label('Hora')
+                ->options($times)
+                ->placeholder(fn (Get $get): string => $get('date') && $times($get) === [] ? 'Sin horarios libres ese día' : 'Elige una hora')
+                ->required(),
+        ];
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function rescheduleTo(string $appointmentId, array $data, bool $byTherapist, bool $assisted, string $success): void
+    {
+        DomainCommand::run(function () use ($appointmentId, $data, $byTherapist, $assisted) {
+            $newId = app(BookingService::class)->reschedule(
+                $appointmentId, Carbon::createFromTimestamp((int) $data['starts_at'], 'UTC')->toDateTimeImmutable(),
+                self::userId(), $byTherapist, $assisted,
+            );
+            AuditLog::record('appointment.cancelled', 'appointment', $appointmentId, ['rescheduled_to' => $newId, 'by_therapist' => $byTherapist]);
+        }, $success);
     }
 
     public static function documentSession(): Action

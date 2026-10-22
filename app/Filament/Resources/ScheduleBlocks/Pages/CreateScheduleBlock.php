@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * RN-18: no se publica un bloqueo con citas activas dentro. Cada una se resuelve
- * antes, de forma explicita, con "Cancelar por indisponibilidad".
+ * antes, de forma explicita: se reprograma o se cancela sin cargo.
  */
 class CreateScheduleBlock extends CreateRecord
 {
@@ -32,7 +32,7 @@ class CreateScheduleBlock extends CreateRecord
         if ($affected->isNotEmpty()) {
             throw ValidationException::withMessages([
                 // MSG-27
-                'data.starts_at' => 'Hay '.$affected->count().' citas agendadas en ese rango. Debes resolver cada una antes de completar el bloqueo («Cancelar por indisponibilidad» en Citas): '
+                'data.starts_at' => 'Hay '.$affected->count().' citas agendadas en ese rango. Debes resolver cada una antes de completar el bloqueo («Reprogramar por indisponibilidad» o «Cancelar por indisponibilidad» en Citas): '
                     .$affected->map(fn (Appointment $a): string => $a->starts_at->tz(config('clinic.timezone'))->format('d/m H:i').' '.$a->patient->name)->implode('; ').'.',
             ]);
         }

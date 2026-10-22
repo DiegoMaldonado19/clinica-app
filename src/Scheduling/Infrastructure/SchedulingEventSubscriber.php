@@ -7,6 +7,7 @@ namespace App\Scheduling\Infrastructure;
 use App\Billing\Domain\Event\PaymentApproved;
 use App\Billing\Domain\Event\PaymentProofSubmitted;
 use App\Billing\Domain\Event\PaymentRejected;
+use App\Billing\Domain\Event\PaymentSettledByCredit;
 use App\ClinicalRecords\Domain\Event\ClinicalNoteSealed;
 use App\Scheduling\Application\AppointmentTransitions;
 use App\Scheduling\Application\SchedulingPolicies;
@@ -58,6 +59,11 @@ final readonly class SchedulingEventSubscriber
         $this->transitions->confirmPayment($event->appointmentId);
     }
 
+    public function onSettledByCredit(PaymentSettledByCredit $event): void
+    {
+        $this->transitions->confirmPaymentByCredit($event->appointmentId);
+    }
+
     public function onPaymentRejected(PaymentRejected $event): void
     {
         $this->transitions->rejectPayment($event->appointmentId);
@@ -78,6 +84,7 @@ final readonly class SchedulingEventSubscriber
             AppointmentApproved::class => 'onApproved',
             PaymentProofSubmitted::class => 'onProofSubmitted',
             PaymentApproved::class => 'onPaymentApproved',
+            PaymentSettledByCredit::class => 'onSettledByCredit',
             PaymentRejected::class => 'onPaymentRejected',
             ClinicalNoteSealed::class => 'onNoteSealed',
         ];

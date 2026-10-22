@@ -63,7 +63,14 @@ final readonly class DomainEventNotifier
             return;
         }
 
-        $this->notify('NT-04', $event, $event->patientId, $this->summary($event->appointmentId));
+        $due = (int) DB::table('payments')->where('appointment_id', $event->appointmentId)->where('kind', 'SESSION_FEE')->value('amount_cents');
+
+        // Saldada con credito a favor (RN-16): NT-08 ya le confirmo la cita.
+        if ($due === 0) {
+            return;
+        }
+
+        $this->notify('NT-04', $event, $event->patientId, ['monto' => Money::gtq($due)->format()] + $this->summary($event->appointmentId));
     }
 
     public function rejected(AppointmentRejected $event): void

@@ -7,6 +7,7 @@ namespace App\Billing\Infrastructure;
 use App\Billing\Application\BillingService;
 use App\Scheduling\Domain\Event\AppointmentApproved;
 use App\Scheduling\Domain\Event\AppointmentCancelled;
+use App\Scheduling\Domain\Event\AppointmentCancelledUnpaid;
 use App\Scheduling\Domain\Event\AppointmentCheckedIn;
 use App\Scheduling\Domain\Event\PayAtDeskChosen;
 use App\Shared\Domain\ValueObject\Money;
@@ -19,7 +20,7 @@ final readonly class BillingEventSubscriber
 
     public function onApproved(AppointmentApproved $event): void
     {
-        $this->billing->openSessionPayment($event->appointmentId, new Money($event->feeAmountCents, $event->feeCurrency));
+        $this->billing->openSessionPayment($event->appointmentId, $event->patientId, new Money($event->feeAmountCents, $event->feeCurrency));
     }
 
     public function onPayAtDesk(PayAtDeskChosen $event): void
@@ -39,6 +40,12 @@ final readonly class BillingEventSubscriber
         $this->billing->settleCancellation($event->appointmentId, $event->feeAmountCents, $event->feePercentage);
     }
 
+    /** Sin cargo: lo unico que hay que hacer es devolver el credito que la cita habia consumido. */
+    public function onCancelledUnpaid(AppointmentCancelledUnpaid $event): void
+    {
+        $this->billing->settleCancellation($event->appointmentId, 0, 0);
+    }
+
     /** @return array<class-string, string> */
     public function subscribe(Dispatcher $events): array
     {
@@ -47,6 +54,7 @@ final readonly class BillingEventSubscriber
             PayAtDeskChosen::class => 'onPayAtDesk',
             AppointmentCheckedIn::class => 'onCheckedIn',
             AppointmentCancelled::class => 'onCancelled',
+            AppointmentCancelledUnpaid::class => 'onCancelledUnpaid',
         ];
     }
 }

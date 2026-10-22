@@ -7,6 +7,12 @@ server {
     return 301 https://$host$request_uri;
 }
 
+# Sin publicar: el asistente llama a la API de Laravel sin salir a Internet.
+server {
+    listen 8000;
+    include /etc/nginx/laravel.conf;
+}
+
 server {
     listen 8443 ssl;
     http2 on;
