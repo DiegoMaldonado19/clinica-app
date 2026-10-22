@@ -15,8 +15,10 @@ use App\Billing\Infrastructure\DatabasePaymentRepository;
 use App\Billing\Infrastructure\NullFiscalDocumentIssuer;
 use App\Billing\Infrastructure\NullPaymentGateway;
 use App\ClinicalRecords\Domain\Port\ClinicalNoteRepository;
+use App\ClinicalRecords\Domain\Port\PsychTestAssignmentRepository;
 use App\ClinicalRecords\Infrastructure\ClinicalCipher;
 use App\ClinicalRecords\Infrastructure\DatabaseClinicalNoteRepository;
+use App\ClinicalRecords\Infrastructure\DatabasePsychTestAssignmentRepository;
 use App\Http\Responses\PanelLoginResponse;
 use App\Identity\Infrastructure\DatabasePatientRegistry;
 use App\Listeners\AuditAuthenticationEvents;
@@ -80,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
         FiscalDocumentIssuer::class => NullFiscalDocumentIssuer::class,
         PaymentGateway::class => NullPaymentGateway::class,
         ClinicalNoteRepository::class => DatabaseClinicalNoteRepository::class,
+        PsychTestAssignmentRepository::class => DatabasePsychTestAssignmentRepository::class,
         MetricsSource::class => DatabaseMetricsSource::class,
         ReportExporter::class => ReportFileExporter::class,
         LoginResponse::class => PanelLoginResponse::class,

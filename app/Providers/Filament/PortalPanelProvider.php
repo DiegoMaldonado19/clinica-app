@@ -6,6 +6,7 @@ use App\Filament\Auth\Login;
 use App\Filament\Auth\RequestPasswordReset;
 use App\Filament\Portal\Pages\EditProfile;
 use App\Filament\Portal\Pages\MyAppointments;
+use App\Filament\Portal\Pages\MyTests;
 use App\Http\Middleware\EnforceTemporaryPassword;
 use App\Http\Middleware\ShortenPortalSession;
 use Filament\Facades\Filament;
@@ -42,7 +43,7 @@ class PortalPanelProvider extends PanelProvider
             ->emailChangeVerification()
             ->multiFactorAuthentication(AdminPanelProvider::secondFactors())
             ->topNavigation()
-            ->pages([MyAppointments::class])
+            ->pages([MyAppointments::class, MyTests::class])
             ->homeUrl(fn (): string => MyAppointments::getUrl())
             // El mismo mensaje de error para todos no revela quien es personal;
             // este enlace evita la confusion sin revelarlo.
