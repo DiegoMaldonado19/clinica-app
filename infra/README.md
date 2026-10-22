@@ -4,7 +4,7 @@ Terraform crea todo lo que vive en AWS; GitHub Actions despliega los tres entorn
 
 | Recurso | Detalle |
 |---|---|
-| EC2 `t3.medium` con IP elástica | Ubuntu 24.04, Docker 29.9.1 y Compose 5.6.0 (`user-data.sh`). Corre dev, stage y prod, cada uno en `~/clinica/<entorno>` |
+| EC2 `t3.medium` con IP elástica | Ubuntu 24.04, Docker 29.9.1 y Compose 5.6.0 (`user-data.sh`). Corre dev, stage y prod, cada uno en `~/clinica/<entorno>`, con el asistente de cada entorno en su red interna |
 | RDS MariaDB 11.4.13 `db.t4g.micro` | Subredes privadas, cifrada, TLS obligatorio, PITR de 7 días. Una base y un usuario por entorno |
 | S3 | Un bucket privado y versionado por entorno. La EC2 entra con su rol, sin llaves |
 | AWS Backup | Respaldo completo de RDS cada domingo a las 02:00 de Guatemala, 4 semanas |
@@ -68,6 +68,7 @@ datos públicos, iguales en los tres entornos:
 |---|---|
 | `DOMAIN` | `<subdominio>.duckdns.org` |
 | `CLINIC_PHONE`, `CLINIC_EMAIL`, `CLINIC_ADDRESS` | Datos de contacto reales de la clínica, los del pie de la landing |
+| `CLINIC_CRISIS_LINE` | El número real de la línea de crisis. El widget del asistente lo muestra siempre (RF-62); sin él no se despliega |
 
 **Environments** (Settings → Environments):
 
@@ -96,6 +97,9 @@ demás llevan el mismo valor en los tres.
 | `MAIL_PASSWORD` | La contraseña de aplicación de Gmail, sin espacios |
 | `ADMIN_EMAIL` | Correo real de la psicóloga en ese entorno |
 | `DUCKDNS_TOKEN`, `TLS_EMAIL` | Token de DuckDNS y el correo para Let's Encrypt |
+| `ANTHROPIC_API_KEY` | La API key de Anthropic del asistente, con límite de gasto en la consola de Anthropic |
+| `CHATBOT_API_TOKEN` | Distinto: `openssl rand -hex 32`. Lo comparten Laravel y el asistente |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | Opcionales. Sin los dos, el canal de WhatsApp no existe y los avisos salen por correo. Pasos en la guía de WhatsApp de F3-07 |
 
 Ningún valor puede llevar comilla simple: el `.env` que escribe el pipeline los envuelve en `'…'`.
 

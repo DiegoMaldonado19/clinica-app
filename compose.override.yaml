@@ -20,6 +20,9 @@ x-app-dev: &app-dev
       GID: ${GID:-1000}
   volumes:
     - .:/var/www/html
+  # El token del asistente tiene un valor de serie en local: funciona sin tocar el .env.
+  environment:
+    CHATBOT_API_TOKEN: ${CHATBOT_API_TOKEN:-token-local}
   depends_on:
     mariadb:
       condition: service_healthy
@@ -70,6 +73,12 @@ services:
   redis:
     ports:
       - "${REDIS_PORT_FORWARD:-6379}:6379"
+
+  # Sin ANTHROPIC_API_KEY en el .env responde la rama de crisis y lo demas falla con aviso.
+  chatbot:
+    environment:
+      CHATBOT_API_TOKEN: ${CHATBOT_API_TOKEN:-token-local}
+      LARAVEL_API_URL: http://web:8080/api/v1
 
   minio:
     image: &minio pgsty/minio:RELEASE.2026-08-04T00-00-00Z

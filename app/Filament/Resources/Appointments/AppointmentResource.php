@@ -106,7 +106,9 @@ class AppointmentResource extends Resource
             AppointmentActions::checkIn(),
             AppointmentActions::documentSession(),
             AppointmentActions::markNoShow(),
+            AppointmentActions::reschedule(),
             AppointmentActions::cancel(),
+            AppointmentActions::rescheduleByTherapist(),
             AppointmentActions::cancelByTherapist(),
         ];
     }

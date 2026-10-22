@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Application;
 
+use App\Scheduling\Domain\ValueObject\BookingSource;
 use DateTimeImmutable;
 
 final readonly class RequestPreAppointment
@@ -19,5 +20,6 @@ final readonly class RequestPreAppointment
         public string $nit,
         public array $consentVersions,
         public ?string $ipAddress,
+        public BookingSource $source = BookingSource::WEB,
     ) {}
 }

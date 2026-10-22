@@ -116,14 +116,41 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # El asistente en Python. La bateria de crisis (20 casos al 100 %, RNF-44) esta
+  # en pytest: si un caso deja de escalar, no se despliega nada.
+  assistant:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container: python:3.13.16-slim-trixie
+    defaults:
+      run:
+        working-directory: chatbot
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Instalar dependencias
+        run: pip install --no-cache-dir --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Formato y estilo (ruff)
+        run: ruff format --check . && ruff check .
+
+      - name: Tipos (mypy)
+        run: mypy app tests
+
+      - name: Pruebas y bateria de crisis (pytest)
+        run: pytest
+
+      - name: Dependencias con vulnerabilidades conocidas
+        run: pip-audit -r requirements.txt
+
   # Construye una vez y promueve la misma imagen de dev a stage y de stage a prod.
   deliver:
-    needs: quality
+    needs: [quality, assistant]
     # Prod no repite quality: despliega lo que ya paso por stage. Los PR de forks
     # no reciben los secretos.
     if: >-
       !cancelled()
-      && (needs.quality.result == 'success' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+      && ((needs.quality.result == 'success' && needs.assistant.result == 'success') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
       && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -134,6 +161,7 @@ jobs:
       actions: read         # prod busca la ultima ejecucion sana de stage
     env:
       APP: ${{ secrets.DOCKERHUB_USERNAME }}/clinica-app
+      BOT: ${{ secrets.DOCKERHUB_USERNAME }}/clinica-chatbot
       WEB: ${{ secrets.DOCKERHUB_USERNAME }}/clinica-web
     steps:
       - uses: actions/checkout@v7.0.1
@@ -209,6 +237,20 @@ jobs:
           cache-from: type=gha,scope=prod
           cache-to: type=gha,mode=max,scope=prod
 
+      - name: Publicar clinica-chatbot
+        if: steps.image.outputs.build
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: chatbot
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.BOT }}:${{ steps.image.outputs.version }}
+            ${{ env.BOT }}:tree-${{ steps.target.outputs.tree }}
+          labels: org.opencontainers.image.version=${{ steps.image.outputs.version }}
+          cache-from: type=gha,scope=chatbot
+          cache-to: type=gha,mode=max,scope=chatbot
+
       - name: Publicar clinica-web
         if: steps.image.outputs.build
         uses: docker/build-push-action@v7.4.0
@@ -236,6 +278,9 @@ jobs:
       # Comillas simples: compose no interpreta un $ dentro del valor. Lo que sale
       # del nombre del entorno y las constantes de arquitectura no son secretos.
       - name: Escribir el .env del entorno
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
         run: |
           cat > .env <<'EOF'
           COMPOSE_PROJECT_NAME='clinica-${{ env.ENTORNO }}'
@@ -281,9 +326,16 @@ jobs:
           CLINIC_PHONE='${{ vars.CLINIC_PHONE }}'
           CLINIC_EMAIL='${{ vars.CLINIC_EMAIL }}'
           CLINIC_ADDRESS='${{ vars.CLINIC_ADDRESS }}'
+          CLINIC_CRISIS_LINE='${{ vars.CLINIC_CRISIS_LINE }}'
+          ANTHROPIC_API_KEY='${{ secrets.ANTHROPIC_API_KEY }}'
+          CHATBOT_API_TOKEN='${{ secrets.CHATBOT_API_TOKEN }}'
           EOF
           # Un secreto sin definir llega vacio: mejor fallar aqui que sembrar a la psicologa sin correo.
           if grep "=''$" .env; then echo "::error::Faltan secretos o variables del Environment"; exit 1; fi
+          # WhatsApp es opcional (F3-07): sin sus dos secretos el canal no existe y todo sale por correo.
+          if [ -n "$WHATSAPP_TOKEN" ] && [ -n "$WHATSAPP_PHONE_NUMBER_ID" ]; then
+            printf "WHATSAPP_TOKEN='%s'\nWHATSAPP_PHONE_NUMBER_ID='%s'\n" "$WHATSAPP_TOKEN" "$WHATSAPP_PHONE_NUMBER_ID" >> .env
+          fi
 
       - name: Desplegar en la EC2
         env:

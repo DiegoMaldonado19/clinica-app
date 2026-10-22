@@ -105,6 +105,11 @@ final readonly class AppointmentTransitions
         $this->apply($id, fn (Appointment $a) => $a->confirmPayment($this->clock));
     }
 
+    public function confirmPaymentByCredit(string $id): void
+    {
+        $this->apply($id, fn (Appointment $a) => $a->confirmPaymentByCredit($this->clock));
+    }
+
     public function rejectPayment(string $id): void
     {
         $this->apply($id, fn (Appointment $a) => $a->rejectPayment($this->clock));

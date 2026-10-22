@@ -77,10 +77,13 @@
     <section id="preguntas" class="mx-auto max-w-3xl px-5 py-14">
         <h2 class="font-serif text-2xl font-semibold md:text-3xl">Preguntas frecuentes</h2>
         <div class="mt-8 divide-y divide-line rounded-card border border-line bg-white">
-            <details class="group p-5" open>
-                <summary class="flex min-h-11 cursor-pointer items-center font-medium">¿Cómo es la primera cita?</summary>
-                <p class="mt-2 text-muted">Es una conversación para conocer qué te trae a consulta y acordar juntos el acompañamiento que mejor te sirve. No necesitas preparar nada.</p>
-            </details>
+            {{-- Las edita la psicologa en el panel; el asistente cita estas mismas. --}}
+            @foreach ($faqs as $faq)
+                <details class="p-5" @if ($loop->first) open @endif>
+                    <summary class="flex min-h-11 cursor-pointer items-center font-medium">{{ $faq->question }}</summary>
+                    <p class="mt-2 whitespace-pre-line text-muted">{{ $faq->answer }}</p>
+                </details>
+            @endforeach
             <details class="p-5">
                 <summary class="flex min-h-11 cursor-pointer items-center font-medium">¿Cómo se realiza el pago?</summary>
                 <p class="mt-2 text-muted">Cuando confirmemos tu solicitud te enviaremos el enlace para registrar tu transferencia desde tu portal. También puedes pagar en efectivo al llegar. El pago por transferencia debe estar aprobado a más tardar {{ $policy->paymentDeadlineHours() }} horas antes de tu cita.</p>
@@ -93,14 +96,8 @@
                     @endforeach
                 </ul>
             </details>
-            <details class="p-5">
-                <summary class="flex min-h-11 cursor-pointer items-center font-medium">¿La terapia es confidencial?</summary>
-                <p class="mt-2 text-muted">Sí. Lo que compartes en sesión se registra cifrado y solo la psicóloga tiene acceso. Recepción únicamente ve los datos administrativos de tu cita.</p>
-            </details>
-            <details class="p-5">
-                <summary class="flex min-h-11 cursor-pointer items-center font-medium">¿Atienden a adolescentes?</summary>
-                <p class="mt-2 text-muted">Sí, con el acompañamiento de madre, padre o tutor en la primera sesión. Para niñas y niños ofrecemos terapia infantil.</p>
-            </details>
         </div>
     </section>
+
+    <livewire:chat-widget />
 </x-layouts.public>

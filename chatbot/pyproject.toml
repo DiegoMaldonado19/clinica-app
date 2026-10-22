@@ -1,0 +1,23 @@
+[project]
+name = "clinica-chatbot"
+version = "1.0.0"
+description = "Asistente conversacional de la clínica (F3-06)"
+requires-python = "==3.13.*"
+
+[tool.ruff]
+line-length = 140
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

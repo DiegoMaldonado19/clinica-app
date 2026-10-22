@@ -101,7 +101,7 @@ class CatalogSeeder extends Seeder
         // WHATSAPP y SMS quedan sembrados pero inactivos: la fase 2 los activa
         // sin migracion (doc 06 §2).
         $this->seed('notification_channels', [
-            ['code' => 'MAIL',     'label' => 'Correo electronico'],
+            ['code' => 'MAIL',     'label' => 'Correo electrónico'],
             ['code' => 'IN_APP',   'label' => 'En la aplicacion'],
             ['code' => 'WHATSAPP', 'label' => 'WhatsApp', 'is_active' => false],
             ['code' => 'SMS',      'label' => 'Mensaje de texto', 'is_active' => false],

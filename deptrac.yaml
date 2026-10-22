@@ -16,7 +16,7 @@ deptrac:
     - name: Framework
       collectors:
         - type: classLike
-          value: ^(Illuminate|Filament|Livewire|Laravel|Symfony|Carbon|Ramsey|League|Psr)\\.*
+          value: ^(Illuminate|Filament|Livewire|Laravel|Symfony|Carbon|Ramsey|League|Psr|OpenSpout|Barryvdh)\\.*
 
     - name: Php
       collectors:

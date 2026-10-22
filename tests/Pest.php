@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Billing\Application\BillingService;
+use App\Billing\Domain\PaymentProof;
 use App\Scheduling\Application\BookingService;
 use App\Scheduling\Application\RequestPreAppointment;
 use App\Scheduling\Domain\ValueObject\TimeSlot;
@@ -75,4 +77,15 @@ function dispatchedTemplates(?string $recipientId = null): array
         ->orderBy('id')
         ->pluck('template_code')
         ->all();
+}
+
+/** Sube un comprobante y lo aprueba: la cita queda AGENDADA. */
+function payAndBook(string $appointmentId, string $staffId): void
+{
+    $billing = app(BillingService::class);
+    $billing->submitProof($appointmentId, new PaymentProof(
+        (string) random_int(1, 999999), (int) DB::table('banks')->value('id'), '4471',
+        new DateTimeImmutable('2026-09-15'), 'comprobantes/x.pdf', str_repeat('b', 64), 1000,
+    ));
+    $billing->approve((string) DB::table('payments')->where('appointment_id', $appointmentId)->value('id'), $staffId);
 }

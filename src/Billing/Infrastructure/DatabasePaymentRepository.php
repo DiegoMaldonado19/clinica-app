@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Billing\Infrastructure;
 
+use App\Billing\Domain\CreditAllocation;
 use App\Billing\Domain\DuplicateReceipt;
 use App\Billing\Domain\Payment;
 use App\Billing\Domain\PaymentKind;
@@ -116,6 +117,50 @@ final readonly class DatabasePaymentRepository implements PaymentRepository
         ]);
 
         return $id;
+    }
+
+    /** FOR UPDATE: dos citas aprobadas a la vez no gastan el mismo credito. */
+    public function availableCredits(string $patientId): array
+    {
+        return DB::table('patient_credits')
+            ->where('patient_id', $patientId)
+            ->whereNull('consumed_at')
+            ->orderBy('issued_at')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->pluck('amount_cents', 'id')
+            ->map(fn (mixed $cents): int => (int) $cents)
+            ->all();
+    }
+
+    /** Un credito usado en parte se divide: lo usado queda consumido y el resto sigue a favor, con su mismo origen. */
+    public function consumeCredits(CreditAllocation $allocation, string $appointmentId, DateTimeImmutable $at): void
+    {
+        foreach ($allocation->consumed as $creditId => $cents) {
+            $credit = DB::table('patient_credits')->where('id', $creditId)->first();
+
+            if ($cents < (int) $credit->amount_cents) {
+                DB::table('patient_credits')->insert([
+                    'id' => (string) Str::uuid7(),
+                    'patient_id' => $credit->patient_id,
+                    'origin_appointment_id' => $credit->origin_appointment_id,
+                    'amount_cents' => (int) $credit->amount_cents - $cents,
+                    'currency' => $credit->currency,
+                    'issued_at' => $credit->issued_at,
+                ]);
+            }
+
+            DB::table('patient_credits')->where('id', $creditId)->update([
+                'amount_cents' => $cents,
+                'consumed_by_appointment_id' => $appointmentId,
+                'consumed_at' => $at->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+            ]);
+        }
+    }
+
+    public function creditUsedBy(string $appointmentId): int
+    {
+        return (int) DB::table('patient_credits')->where('consumed_by_appointment_id', $appointmentId)->sum('amount_cents');
     }
 
     private function restore(?object $row): ?Payment

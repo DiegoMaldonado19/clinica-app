@@ -9,6 +9,7 @@ use App\Billing\Domain\Event\LateCancellationFeeWaived;
 use App\Billing\Domain\Event\PaymentApproved;
 use App\Billing\Domain\Event\PaymentProofSubmitted;
 use App\Billing\Domain\Event\PaymentRejected;
+use App\Billing\Domain\Event\PaymentSettledByCredit;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\Event\DomainEvent;
 use App\Shared\Domain\ValueObject\Money;
@@ -38,20 +39,28 @@ final class Payment
         private ?string $waiverReason = null,
     ) {}
 
-    public static function forSessionFee(string $id, string $appointmentId, Money $amount): self
+    /** El monto es lo que queda por pagar despues del credito a favor (RN-16): en cero, nace saldado. */
+    public static function forSessionFee(string $id, string $appointmentId, Money $due, ClockInterface $clock): self
     {
-        return new self($id, $appointmentId, PaymentKind::SESSION_FEE, $amount, null, PaymentStatus::PENDIENTE);
+        if (! $due->isZero()) {
+            return new self($id, $appointmentId, PaymentKind::SESSION_FEE, $due, null, PaymentStatus::PENDIENTE);
+        }
+
+        $payment = new self($id, $appointmentId, PaymentKind::SESSION_FEE, $due, null, PaymentStatus::APROBADO);
+        $payment->events[] = new PaymentSettledByCredit($id, $appointmentId, $clock->now());
+
+        return $payment;
     }
 
     /**
-     * Cargo por cancelacion tardia. Si la sesion ya estaba pagada, el cargo nace
-     * cubierto por ese pago y el resto vuelve como credito: nunca se cobra dos veces.
+     * Cargo por cancelacion tardia. Si lo pagado (en efectivo o con credito) lo
+     * cubre, nace cubierto y el resto vuelve como credito: nunca se cobra dos veces.
      */
-    public static function forLateCancellation(string $id, string $appointmentId, Money $amount, int $percentage, bool $coveredBySessionPayment, ClockInterface $clock): self
+    public static function forLateCancellation(string $id, string $appointmentId, Money $amount, int $percentage, bool $covered, ClockInterface $clock): self
     {
         $payment = new self(
             $id, $appointmentId, PaymentKind::LATE_CANCELLATION_FEE, $amount, $percentage,
-            $coveredBySessionPayment ? PaymentStatus::APROBADO : PaymentStatus::PENDIENTE,
+            $covered ? PaymentStatus::APROBADO : PaymentStatus::PENDIENTE,
         );
         $payment->events[] = new LateCancellationFeeApplied($id, $appointmentId, $clock->now(), $amount->amountInCents, $percentage);
 

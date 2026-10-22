@@ -7,6 +7,7 @@ namespace App\Filament\Portal\Pages;
 use App\Billing\Application\BillingService;
 use App\Billing\Domain\DuplicateReceipt;
 use App\Billing\Domain\PaymentProof;
+use App\Billing\Domain\Port\PaymentGateway;
 use App\Filament\Actions\AppointmentActions;
 use App\Filament\Support\StatusBadge;
 use App\Models\Appointment;
@@ -57,7 +58,7 @@ class MyAppointments extends Page implements HasTable
     /** La cita con pago pendiente mas proxima, para la cuenta regresiva de P-01. */
     public function pendingPayment(): ?Appointment
     {
-        return $this->mine()->inStatus(['CONFIRMADA_PENDIENTE_PAGO'])->with('service:id,name')->orderBy('starts_at')->first();
+        return $this->mine()->inStatus(['CONFIRMADA_PENDIENTE_PAGO'])->with(['service:id,name', 'payments'])->orderBy('starts_at')->first();
     }
 
     public function creditBalance(): ?string
@@ -75,7 +76,7 @@ class MyAppointments extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => $this->mine()->with(['service:id,name', 'status:id,code,label']))
+            ->query(fn () => $this->mine()->with(['service:id,name', 'status:id,code,label', 'payments']))
             ->defaultSort('starts_at', 'desc')
             ->columns([
                 TextColumn::make('starts_at')->label('Cita')->dateTime('l j \d\e F · H:i'),
@@ -88,6 +89,15 @@ class MyAppointments extends Page implements HasTable
             ])
             ->recordActions([
                 $this->submitProofAction(),
+                // Solo con una pasarela configurada; hoy el adaptador nulo la oculta.
+                Action::make('payOnline')
+                    ->label('Pagar con tarjeta')
+                    ->color('gray')
+                    ->visible(fn (Appointment $record): bool => $record->statusCode() === 'CONFIRMADA_PENDIENTE_PAGO' && app(PaymentGateway::class)->isAvailable())
+                    ->action(function (Appointment $record): void {
+                        $payment = $record->sessionPayment();
+                        $this->redirect(app(PaymentGateway::class)->checkoutUrl($payment->id, Money::gtq($payment->amount_cents)));
+                    }),
                 Action::make('payAtDesk')
                     ->label('Pagar en efectivo al llegar')
                     ->color('gray')
@@ -96,6 +106,17 @@ class MyAppointments extends Page implements HasTable
                     ->action(fn (Appointment $record) => AppointmentActions::run(
                         fn (AppointmentTransitions $t) => $t->payAtDesk($this->ownedId($record)),
                         'Perfecto. Recuerda llegar al menos 15 minutos antes para realizar el pago en recepción.',
+                    )),
+                Action::make('reschedule')
+                    ->label('Reprogramar')
+                    ->color('gray')
+                    ->modalHeading('Reprogramar mi cita')
+                    ->modalDescription(fn (Appointment $record): string => 'Reprogramar cancela tu cita actual y aparta la nueva. '.AppointmentActions::cancellationPreview($record))
+                    ->visible(fn (Appointment $record): bool => $record->isCancellable() && (bool) auth()->user()?->hasAbility('appointment.cancel.own'))
+                    ->schema(fn (Appointment $record): array => AppointmentActions::rescheduleFields($record, assisted: false))
+                    ->action(fn (Appointment $record, array $data) => AppointmentActions::rescheduleTo(
+                        $this->ownedId($record), $data, byTherapist: false, assisted: false,
+                        success: 'Tu cita quedó reprogramada. Te enviamos el detalle por correo.',
                     )),
                 Action::make('cancel')
                     ->label('Cancelar')

@@ -35,6 +35,7 @@ class NotificationTemplateSeeder extends Seeder
         'NT-15' => ['Tu sesión quedó registrada', "Hola :nombre:\n\nGracias por asistir a tu sesión del :fecha. Cuando quieras agendar la siguiente, puedes hacerlo en :sitio"],
         'NT-20' => ['Falla de entrega de una notificación', "La notificación :plantilla dirigida a :destinatario no pudo entregarse después de tres intentos.\nÚltimo error: :error"],
         'NT-22' => ['Tu cita fue cancelada por indisponibilidad', "Hola :nombre:\n\nLa psicóloga no estará disponible el :fecha a las :hora, por lo que cancelamos tu cita sin ningún cargo. :detalle\n\nPuedes elegir otro horario en :sitio"],
+        'NT-24' => ['Alerta prioritaria: posible crisis en el asistente', "El asistente de la landing detectó una posible señal de crisis el :fecha a las :hora, mostró la línea de crisis y cerró la conversación automática.\nSeñal: :senal\nSesión: :sesion\n\nEl asistente no guarda los mensajes ni los datos de la persona."],
         'NT-23' => ['Tienes un crédito a favor', "Hola :nombre:\n\nGeneramos un crédito a favor de :monto por tu cita del :fecha. Se aplicará a tu próxima cita."],
     ];
 

@@ -6,13 +6,13 @@ use App\Filament\Resources\Appointments\AppointmentResource;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Schemas\PersonFields;
 use App\Filament\Support\DomainCommand;
+use App\Filament\Support\SlotOptions;
 use App\Identity\Infrastructure\DatabasePatientRegistry;
 use App\Models\Appointment;
 use App\Models\Service;
 use App\Models\User;
 use App\Scheduling\Application\BookingService;
 use App\Scheduling\Domain\ValueObject\BookingSource;
-use App\Scheduling\Domain\ValueObject\TimeSlot;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -75,8 +75,8 @@ class CreateAppointment extends CreateRecord
                 ->live()
                 ->afterStateUpdated(fn (Set $set) => $set('starts_at', null)),
             Select::make('starts_at')->label('Hora')
-                ->options(fn (Get $get): array => self::freeTimes($get('service_id'), $get('date')))
-                ->placeholder(fn (Get $get): string => $get('service_id') && $get('date') && self::freeTimes($get('service_id'), $get('date')) === []
+                ->options(fn (Get $get): array => SlotOptions::for($get('service_id'), $get('date'), assisted: true))
+                ->placeholder(fn (Get $get): string => $get('service_id') && $get('date') && SlotOptions::for($get('service_id'), $get('date'), assisted: true) === []
                     ? 'Sin horarios libres ese día'
                     : __('filament-forms::components.select.placeholder'))
                 ->helperText('Solo se ofrecen horarios libres; los bloqueos de agenda ya están descontados.')
@@ -123,25 +123,8 @@ class CreateAppointment extends CreateRecord
         // ponytail: solo los proximos 60 dias; mas alla avisa el campo Hora. Ampliar si recepcion agenda mas lejos.
         return collect(range(0, 59))
             ->map(fn (int $offset): string => $today->copy()->addDays($offset)->toDateString())
-            ->filter(fn (string $date): bool => self::freeTimes($serviceId, $date) === [])
+            ->filter(fn (string $date): bool => SlotOptions::for($serviceId, $date, assisted: true) === [])
             ->values()
             ->all();
-    }
-
-    /** @return array<int, string> marca de tiempo UTC => hora local */
-    private static function freeTimes(?string $serviceId, ?string $date): array
-    {
-        if ($serviceId === null || $date === null) {
-            return [];
-        }
-
-        $slots = app(BookingService::class)->bookableSlots(
-            $serviceId, (string) DB::table('therapists')->value('id'),
-            Carbon::parse($date, config('clinic.timezone'))->toDateTimeImmutable(), assisted: true,
-        );
-
-        return collect($slots)->mapWithKeys(fn (TimeSlot $slot): array => [
-            $slot->startsAt->getTimestamp() => Carbon::instance($slot->startsAt)->tz(config('clinic.timezone'))->format('H:i'),
-        ])->all();
     }
 }

@@ -65,6 +65,15 @@ it('difiere a las 07:00 lo que se genera en la ventana de silencio', function ()
     Queue::assertPushed(SendNotificationJob::class, fn (SendNotificationJob $job) => $job->delay == gtAt('2026-09-16 07:00')->toDateTimeImmutable());
 });
 
+it('entrega de inmediato una alerta urgente aun en la ventana de silencio (NT-24)', function () {
+    $this->travelTo(gtAt('2026-09-15 23:30'));
+
+    $this->dispatcher->dispatch('NT-24', 'crisis:s1', $this->patient->id, ['fecha' => '15 de septiembre', 'hora' => '23:30', 'senal' => 'peligro inmediato', 'sesion' => 's1']);
+
+    expect(DB::table('notification_dispatches')->value('status_id'))
+        ->toBe(DB::table('notification_statuses')->where('code', 'ENVIADO')->value('id'));
+});
+
 it('avisa a la administracion con NT-20 al tercer fallo', function () {
     Queue::fake();
     $admin = User::factory()->role('admin')->create();

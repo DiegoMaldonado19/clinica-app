@@ -12,14 +12,14 @@ use App\Scheduling\Domain\Exception\SlotUnavailable;
 use App\Scheduling\Domain\ValueObject\TimeSlot;
 use App\Shared\Domain\ValueObject\Nit;
 use App\Shared\Domain\ValueObject\PhoneNumber;
-use App\Support\DomainRule;
+use App\Support\BookingContact;
+use App\Support\BookingThrottle;
 use App\Support\PolicyText;
 use DomainException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -108,32 +108,13 @@ final class BookingWizard extends Component
 
     public function submit(BookingService $booking): void
     {
-        $this->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:190'],
-            'phone' => ['required', DomainRule::from(fn (string $v) => PhoneNumber::fromGuatemalan($v))],
-            'nit' => ['required', DomainRule::from(fn (string $v) => Nit::from($v))],
-            'accepted' => ['accepted'],
-        ], [
-            'name.required' => 'Necesitamos tu nombre completo para registrar la cita.',
-            'email.*' => 'Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com.',
-            'phone.required' => 'Ingresa un número de 8 dígitos de Guatemala, o incluye el código de país.',
-            'nit.required' => 'El NIT no pasó la verificación. Si no tienes NIT, escribe "CF".',
-            'accepted.accepted' => 'Debes aceptar la política de cancelación para continuar.',
-        ]);
+        $this->validate(BookingContact::rules(), BookingContact::messages());
 
-        // Doc 05 §6: 10 solicitudes por minuto por IP y 3 por hora por correo.
-        $ipKey = 'booking-ip:'.request()->ip();
-        $emailKey = 'booking-email:'.mb_strtolower($this->email);
-
-        if (RateLimiter::tooManyAttempts($ipKey, 10) || RateLimiter::tooManyAttempts($emailKey, 3)) {
+        if (BookingThrottle::tooMany(request()->ip(), $this->email)) {
             $this->notice = 'Recibimos varias solicitudes seguidas. Espera unos minutos o llámanos al '.config('clinic.phone').'.';
 
             return;
         }
-
-        RateLimiter::hit($ipKey, 60);
-        RateLimiter::hit($emailKey, 3600);
 
         try {
             DB::transaction(fn () => $booking->request(new RequestPreAppointment(

@@ -3,12 +3,14 @@
 use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\PaymentProofController;
 use App\Http\Middleware\EnforceTemporaryPassword;
+use App\Models\Faq;
 use App\Models\Service;
 use App\Support\PolicyText;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn (PolicyText $policy) => view('landing', [
     'services' => Service::query()->where('is_active', true)->with('prices')->orderBy('duration_minutes')->get(),
+    'faqs' => Faq::query()->orderBy('position')->get(),
     'policy' => $policy,
 ]))->name('home');
 

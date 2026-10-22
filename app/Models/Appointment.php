@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Scheduling\Domain\Model\AppointmentStatus as DomainStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $starts_at
  * @property Carbon|null $hold_expires_at
  * @property Carbon|null $payment_due_at
+ * @property string $service_id
  * @property int $fee_amount_cents
  * @property string $source
  */
@@ -68,6 +70,18 @@ class Appointment extends Model
     public function statusCode(): string
     {
         return $this->status->code;
+    }
+
+    /** Lo decide el enum del dominio: lo que se puede cancelar tambien se puede reprogramar. */
+    public function isCancellable(): bool
+    {
+        return DomainStatus::from($this->statusCode())->isCancellable();
+    }
+
+    /** El cobro de la sesion; despues del credito a favor puede ser menor que la tarifa (RN-16). */
+    public function sessionPayment(): ?Payment
+    {
+        return $this->payments->firstWhere('kind', 'SESSION_FEE');
     }
 
     /**

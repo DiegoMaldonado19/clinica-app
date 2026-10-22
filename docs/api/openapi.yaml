@@ -1,0 +1,224 @@
+openapi: 3.1.0
+info:
+  title: API del asistente de la clínica
+  version: 1.0.0
+  description: |
+    Lo único que el asistente conversacional puede hacer con la clínica (ADR-012, RN-19).
+    Aplica las mismas reglas que la landing: RN-01 a RN-04, consentimientos versionados y
+    límites por correo. Tiene un solo cliente, el servicio `chatbot`, interno a la red de
+    compose; por eso usa un token de servicio y no Sanctum.
+
+    Límite: 60 peticiones por minuto. El de 30 mensajes por minuto por persona lo pone el widget.
+servers:
+  - url: http://web:8000/api/v1
+    description: Nube, dentro de la red de compose (sin publicar)
+  - url: http://web:8080/api/v1
+    description: Local
+security:
+  - token: []
+tags:
+  - name: Asistente
+
+paths:
+  /knowledge:
+    get:
+      tags: [Asistente]
+      summary: Base de conocimiento del asistente
+      description: Servicios y tarifas vigentes, políticas (RN-03, RN-05, RN-06), horario, FAQ y contacto.
+      responses:
+        '200':
+          description: La base de conocimiento.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Knowledge' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /availability:
+    get:
+      tags: [Asistente]
+      summary: Horarios libres de un servicio en un día
+      description: Los mismos que ofrece el calendario de la landing. Ninguno para hoy (RN-01) ni con menos de 24 h (RN-02).
+      parameters:
+        - { name: service_id, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: date, in: query, required: true, schema: { type: string, format: date }, example: '2026-10-27' }
+      responses:
+        '200':
+          description: Horarios libres.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Availability' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /appointments:
+    post:
+      tags: [Asistente]
+      summary: Solicita una cita con origen chat
+      description: |
+        La persona ya confirmó sus datos y aceptó la política en el formulario del widget; sus datos
+        nunca pasan por el modelo. La cita nace SOLICITADA, con los consentimientos vigentes, y recibe
+        la misma confirmación que por la landing (NT-01). Límite: 3 por hora por correo y 10 por minuto por IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppointmentRequest' }
+      responses:
+        '201':
+          description: Solicitud registrada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: El horario ya no está libre.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /crisis-alerts:
+    post:
+      tags: [Asistente]
+      summary: Aviso urgente de crisis a la psicóloga (NT-24)
+      description: |
+        RN-20. Sale aun dentro de la ventana de silencio, una vez por sesión. Lleva la categoría de la
+        señal, nunca las palabras de la persona (RF-58). Con `crisis_escalation_enabled` en falso no avisa;
+        la línea de crisis y el cierre del chat no dependen de este endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, signal]
+              properties:
+                session_id: { type: string, maxLength: 64 }
+                signal: { type: string, enum: [autolesion, desesperanza, riesgo_terceros, peligro, asistente] }
+      responses:
+        '202':
+          description: Aviso registrado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notified: { type: integer, description: Personas que recibirán el aviso. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    token:
+      type: http
+      scheme: bearer
+      description: CHATBOT_API_TOKEN, comparado en tiempo constante. Sin token configurado, todo es 401.
+
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+    TooManyRequests:
+      description: Se superó el límite de peticiones.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+    ValidationError:
+      description: Datos inválidos o una regla de negocio lo impide (por ejemplo, una cita para el mismo día).
+      content:
+        application/json:
+          schema:
+            allOf:
+              - { $ref: '#/components/schemas/Message' }
+              - type: object
+                properties:
+                  errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+
+  schemas:
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+
+    Knowledge:
+      type: object
+      properties:
+        clinic:
+          type: object
+          properties:
+            name: { type: string }
+            address: { type: string }
+            phone: { type: string }
+            email: { type: string }
+            crisis_line: { type: string }
+        services:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              duration_minutes: { type: integer }
+              price: { type: string, example: Q 300 }
+        hours:
+          type: array
+          items:
+            type: object
+            properties:
+              day: { type: string, example: lunes }
+              from: { type: string, example: '08:00' }
+              to: { type: string, example: '12:00' }
+        policies:
+          type: object
+          properties:
+            cancellation:
+              type: array
+              items:
+                type: object
+                properties:
+                  when: { type: string, example: 24 horas o más de anticipación }
+                  fee: { type: string, example: Sin cargo }
+            payment_deadline_hours: { type: integer }
+            approval_sla_hours: { type: integer }
+        faqs:
+          type: array
+          items:
+            type: object
+            properties:
+              question: { type: string }
+              answer: { type: string }
+
+    Availability:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        slots:
+          type: array
+          items:
+            type: object
+            properties:
+              starts_at: { type: string, format: date-time, description: En UTC. }
+              time: { type: string, example: '09:00', description: Hora de Guatemala. }
+        notice:
+          type: [string, 'null']
+          description: Por qué no hay horarios, cuando la regla lo explica (citas del mismo día).
+
+    AppointmentRequest:
+      type: object
+      required: [service_id, starts_at, name, email, phone, nit, accepted]
+      properties:
+        service_id: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time, description: El starts_at de /availability. }
+        name: { type: string, maxLength: 150 }
+        email: { type: string, format: email, maxLength: 190 }
+        phone: { type: string, description: 8 dígitos de Guatemala o con código de país. }
+        nit: { type: string, description: NIT con dígito verificador o CF. }
+        accepted: { type: boolean, const: true, description: Aceptó la política de cancelación y el tratamiento de sus datos. }
+        ip_address: { type: [string, 'null'], description: IP de la persona, para el registro del consentimiento. }

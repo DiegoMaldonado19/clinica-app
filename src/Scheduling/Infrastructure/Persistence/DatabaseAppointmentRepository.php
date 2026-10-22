@@ -56,6 +56,7 @@ final readonly class DatabaseAppointmentRepository implements AppointmentReposit
             $row->payment_due_at ? $this->date($row->payment_due_at) : null,
             $row->approved_by,
             $row->rejection_reason,
+            $row->rescheduled_from_id,
         );
     }
 
@@ -115,6 +116,7 @@ final readonly class DatabaseAppointmentRepository implements AppointmentReposit
                 'fee_currency' => $appointment->fee->currency,
                 'requested_at' => $this->format($requestedAt) ?? $now,
                 'source' => $appointment->source->value,
+                'rescheduled_from_id' => $appointment->rescheduledFromId,
                 'created_at' => $now,
             ] + $row);
         } catch (UniqueConstraintViolationException) {

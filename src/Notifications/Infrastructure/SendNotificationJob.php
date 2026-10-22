@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Notifications\Infrastructure;
 
-use App\Notifications\Domain\Port\NotificationChannel;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Infrastructure\Persistence\Catalog;
 use Illuminate\Bus\Queueable;
@@ -34,7 +33,7 @@ final class SendNotificationJob implements ShouldQueue
 
     public function __construct(public readonly int $dispatchId) {}
 
-    public function handle(NotificationChannel $channel, NotificationDispatcher $dispatcher, Catalog $catalog, ClockInterface $clock): void
+    public function handle(NotificationDispatcher $dispatcher, Catalog $catalog, ClockInterface $clock): void
     {
         $dispatch = DB::table('notification_dispatches')->where('id', $this->dispatchId)->first();
 
@@ -45,14 +44,15 @@ final class SendNotificationJob implements ShouldQueue
         // Un reintento atrasado puede caer dentro de la ventana de silencio.
         $resumeAt = $dispatcher->quietHours()->nextAllowed($clock->now());
 
-        if ($dispatch->template_code !== 'NT-20' && $resumeAt > $clock->now()) {
+        if (! NotificationDispatcher::isUrgent($dispatch->template_code) && $resumeAt > $clock->now()) {
             $this->release($resumeAt->getTimestamp() - $clock->now()->getTimestamp());
 
             return;
         }
 
         $template = DB::table('notification_templates')->where('code', $dispatch->template_code)->first(['subject', 'body']);
-        $address = (string) DB::table('users')->where('id', $dispatch->recipient_id)->value('email');
+        $channel = $dispatcher->channel($catalog->code('notification_channels', (int) $dispatch->channel_id));
+        $address = (string) DB::table('users')->where('id', $dispatch->recipient_id)->value($channel->code() === 'WHATSAPP' ? 'phone_e164' : 'email');
         /** @var array<string, string> $data */
         $data = json_decode(Crypt::decryptString($dispatch->payload), true, flags: JSON_THROW_ON_ERROR);
         $replacements = array_combine(array_map(fn (string $key): string => ":{$key}", array_keys($data)), $data);
@@ -99,7 +99,7 @@ final class SendNotificationJob implements ShouldQueue
                 'plantilla' => $dispatch->template_code,
                 'destinatario' => $recipient,
                 'error' => mb_substr($exception->getMessage(), 0, 200),
-            ], urgent: true);
+            ]);
         }
     }
 }
