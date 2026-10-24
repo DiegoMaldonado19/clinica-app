@@ -1,5 +1,7 @@
 <?php
 
+use App\ClinicalRecords\Application\PsychTestService;
+use App\ClinicalRecords\Domain\Port\PsychTestAssignmentRepository;
 use App\Scheduling\Application\AppointmentTransitions;
 use App\Scheduling\Domain\Port\AppointmentRepository;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -35,11 +37,24 @@ Artisan::command('appointments:reconcile', function (AppointmentRepository $appo
     $this->info("Expiradas: {$expired->count()} · Canceladas por impago: {$unpaid->count()} · Posibles inasistencias por revisar: {$noShowCandidates}");
 })->purpose('Recupera expiraciones e impagos que los trabajos diferidos no procesaron');
 
+// HU-13: la prueba sin responder se marca vencida una sola vez y avisa con NT-17.
+Artisan::command('psych-tests:expire', function (PsychTestAssignmentRepository $assignments, PsychTestService $tests, ClockInterface $clock) {
+    $expired = collect($assignments->idsPastDue($clock->now()))
+        ->filter(fn (string $id) => DB::transaction(fn () => $tests->expire($id)));
+
+    $this->info("Pruebas vencidas: {$expired->count()}");
+})->purpose('Marca como vencidas las pruebas psicometricas sin responder');
+
 // El bloqueo del planificador vive en la base, no en Redis: con dos instancias,
 // es lo que evita que una tarea corra dos veces (doc 03 §2.3, CA-33).
 Schedule::useCache('database');
 
 Schedule::command('appointments:reconcile')
     ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('psych-tests:expire')
+    ->hourly()
     ->withoutOverlapping()
     ->onOneServer();

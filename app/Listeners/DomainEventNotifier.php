@@ -9,6 +9,9 @@ use App\Billing\Domain\Event\PatientCreditIssued;
 use App\Billing\Domain\Event\PaymentProofSubmitted;
 use App\Billing\Domain\Event\PaymentRejected;
 use App\ClinicalRecords\Domain\Event\ClinicalNoteSealed;
+use App\ClinicalRecords\Domain\Event\PsychTestAssigned;
+use App\ClinicalRecords\Domain\Event\PsychTestOverdue;
+use App\ClinicalRecords\Domain\Event\PsychTestSubmitted;
 use App\Identity\Domain\Event\PatientAccountCreated;
 use App\Notifications\Domain\IdempotencyKey;
 use App\Notifications\Infrastructure\NotificationDispatcher;
@@ -146,6 +149,45 @@ final readonly class DomainEventNotifier
         $this->notify('NT-23', $event, $data['patient_id'], ['monto' => Money::gtq($event->amountCents)->format()] + $data);
     }
 
+    public function testAssigned(PsychTestAssigned $event): void
+    {
+        $this->notify('NT-16', $event, $event->patientId, [
+            'nombre' => $this->nameOf($event->patientId),
+            'limite' => $this->local($event->dueAt->format('Y-m-d H:i:s'), 'l j \d\e F'),
+            'enlace' => url('/portal/mis-pruebas'),
+        ]);
+    }
+
+    /** Solo la señal de riesgo avisa, y solo a la psicóloga: NT-25 urgente. */
+    public function testSubmitted(PsychTestSubmitted $event): void
+    {
+        if (! $event->urgent) {
+            return;
+        }
+
+        $at = $event->occurredAt->format('Y-m-d H:i:s');
+
+        foreach ($this->activeUsersWithRole('admin') as $userId) {
+            $this->notify('NT-25', $event, $userId, [
+                'fecha' => $this->local($at, 'j \d\e F'),
+                'hora' => $this->local($at, 'H:i'),
+                'enlace' => url("/admin/psych-test-assignments/{$event->assignmentId}"),
+            ]);
+        }
+    }
+
+    public function testOverdue(PsychTestOverdue $event): void
+    {
+        $data = [
+            'paciente' => $this->nameOf($event->patientId),
+            'limite' => $this->local($event->dueAt->format('Y-m-d H:i:s'), 'l j \d\e F'),
+        ];
+
+        foreach ([$event->patientId, ...$this->activeUsersWithRole('admin')] as $userId) {
+            $this->notify('NT-17', $event, $userId, $data);
+        }
+    }
+
     /** @return array<class-string, string> */
     public function subscribe(Dispatcher $events): array
     {
@@ -164,6 +206,9 @@ final readonly class DomainEventNotifier
             LateCancellationFeeApplied::class => 'feeApplied',
             ClinicalNoteSealed::class => 'noteSealed',
             PatientCreditIssued::class => 'creditIssued',
+            PsychTestAssigned::class => 'testAssigned',
+            PsychTestSubmitted::class => 'testSubmitted',
+            PsychTestOverdue::class => 'testOverdue',
         ];
     }
 
@@ -186,6 +231,11 @@ final readonly class DomainEventNotifier
         foreach ($staff as $userId) {
             $this->notify($template, $event, $userId, $data);
         }
+    }
+
+    private function nameOf(string $userId): string
+    {
+        return (string) DB::table('users')->where('id', $userId)->value('name');
     }
 
     /** @return list<string> */

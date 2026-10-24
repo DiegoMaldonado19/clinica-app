@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
 final readonly class NotificationDispatcher
 {
     /** Alertas que no esperan a que termine la ventana de silencio (RN-17). */
-    private const URGENT = ['NT-20', 'NT-24'];
+    private const URGENT = ['NT-20', 'NT-24', 'NT-25'];
 
     /** @param list<NotificationChannel> $channels los activos; el primero, el correo, es el respaldo */
     public function __construct(

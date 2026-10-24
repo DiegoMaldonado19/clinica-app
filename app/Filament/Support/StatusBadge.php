@@ -17,7 +17,7 @@ final class StatusBadge
         return match ($code) {
             'SOLICITADA', 'PAGO_EN_REVISION', 'EN_REVISION', 'EN_CAJA', 'PAGO_EN_CAJA' => 'info',
             'CONFIRMADA_PENDIENTE_PAGO', 'PENDIENTE' => 'warning',
-            'AGENDADA', 'EN_CURSO', 'ATENDIDA', 'APROBADO', 'EXONERADO' => 'success',
+            'AGENDADA', 'EN_CURSO', 'ATENDIDA', 'APROBADO', 'EXONERADO', 'RESPONDIDA' => 'success',
             default => 'danger',
         };
     }
@@ -31,7 +31,7 @@ final class StatusBadge
             'PAGO_EN_CAJA', 'EN_CAJA' => Heroicon::OutlinedBanknotes,
             'AGENDADA', 'APROBADO' => Heroicon::OutlinedCheckCircle,
             'EN_CURSO' => Heroicon::OutlinedPlayCircle,
-            'ATENDIDA' => Heroicon::OutlinedCheckBadge,
+            'ATENDIDA', 'RESPONDIDA' => Heroicon::OutlinedCheckBadge,
             'EXONERADO' => Heroicon::OutlinedHandThumbUp,
             'NO_SHOW' => Heroicon::OutlinedUserMinus,
             default => Heroicon::OutlinedXCircle,

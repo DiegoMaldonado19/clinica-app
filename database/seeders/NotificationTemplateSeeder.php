@@ -33,10 +33,14 @@ class NotificationTemplateSeeder extends Seeder
         'NT-13' => ['Tu cita fue cancelada', "Hola :nombre:\n\nCancelamos tu cita del :fecha a las :hora. :detalle"],
         'NT-14' => ['Cargo por cancelación tardía', "Hola :nombre:\n\nPor cancelar tu cita del :fecha a las :hora con menos de 24 horas de anticipación se generó un cargo de :monto (:porcentaje % de la tarifa)."],
         'NT-15' => ['Tu sesión quedó registrada', "Hola :nombre:\n\nGracias por asistir a tu sesión del :fecha. Cuando quieras agendar la siguiente, puedes hacerlo en :sitio"],
+        // NT-16, NT-17 y NT-25 no nombran el instrumento: el correo no dice qué se evalúa.
+        'NT-16' => ['Tienes un cuestionario por responder', "Hola :nombre:\n\nTu psicóloga te asignó un cuestionario breve. Puedes responderlo hasta el :limite desde tu portal: :enlace"],
+        'NT-17' => ['Venció el plazo de un cuestionario', 'El cuestionario que la psicóloga asignó a :paciente tenía plazo hasta el :limite y venció sin respuesta. Si todavía hace falta, puede asignarse de nuevo.'],
         'NT-20' => ['Falla de entrega de una notificación', "La notificación :plantilla dirigida a :destinatario no pudo entregarse después de tres intentos.\nÚltimo error: :error"],
         'NT-22' => ['Tu cita fue cancelada por indisponibilidad', "Hola :nombre:\n\nLa psicóloga no estará disponible el :fecha a las :hora, por lo que cancelamos tu cita sin ningún cargo. :detalle\n\nPuedes elegir otro horario en :sitio"],
         'NT-24' => ['Alerta prioritaria: posible crisis en el asistente', "El asistente de la landing detectó una posible señal de crisis el :fecha a las :hora, mostró la línea de crisis y cerró la conversación automática.\nSeñal: :senal\nSesión: :sesion\n\nEl asistente no guarda los mensajes ni los datos de la persona."],
         'NT-23' => ['Tienes un crédito a favor', "Hola :nombre:\n\nGeneramos un crédito a favor de :monto por tu cita del :fecha. Se aplicará a tu próxima cita."],
+        'NT-25' => ['Alerta prioritaria: un cuestionario requiere revisión', "Un paciente respondió el :fecha a las :hora un cuestionario en el que marcó pensamientos de muerte o de hacerse daño.\nRevisa el resultado en el panel: :enlace\n\nEste correo no incluye el nombre del paciente ni sus respuestas."],
     ];
 
     public function run(): void
