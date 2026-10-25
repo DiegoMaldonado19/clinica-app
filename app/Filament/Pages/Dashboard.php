@@ -10,11 +10,15 @@ use App\Analytics\Domain\Report;
 use App\Analytics\Domain\ReportPeriod;
 use App\Models\Service;
 use App\Shared\Domain\Clock\ClockInterface;
+use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -36,11 +40,27 @@ class Dashboard extends BaseDashboard
 
     public function filtersForm(Schema $schema): Schema
     {
+        $custom = fn (Get $get): bool => $get('period') === 'custom';
+
         return $schema->components([
             Select::make('period')->label('Periodo')
-                ->options(ReportPeriod::PRESETS)
+                ->options(ReportPeriod::PRESETS + ['custom' => 'Rango personalizado'])
                 ->default('month')
-                ->selectablePlaceholder(false),
+                ->selectablePlaceholder(false)
+                // El rango personalizado arranca con las fechas del periodo que se estaba viendo.
+                ->afterStateUpdated(function (?string $old, ?string $state, Set $set): void {
+                    if ($state === 'custom') {
+                        $period = self::period(['period' => $old]);
+                        $set('from', $period->from->format('Y-m-d'));
+                        $set('to', $period->to->modify('-1 day')->format('Y-m-d'));
+                    }
+                }),
+            DatePicker::make('from')->label('Desde')->visible($custom)
+                ->minDate(fn (Get $get): ?string => self::shift($get('to'), '-'.ReportPeriod::LONGEST_RANGE.' +1 day'))
+                ->maxDate(fn (Get $get): ?string => $get('to')),
+            DatePicker::make('to')->label('Hasta')->visible($custom)
+                ->minDate(fn (Get $get): ?string => $get('from'))
+                ->maxDate(fn (Get $get): ?string => self::shift($get('from'), '+'.ReportPeriod::LONGEST_RANGE.' -1 day')),
             Select::make('service')->label('Servicio')
                 ->options(fn (): array => Service::query()->orderBy('name')->pluck('name', 'id')->all())
                 ->placeholder('Todos los servicios'),
@@ -55,7 +75,7 @@ class Dashboard extends BaseDashboard
     public static function report(?array $filters): Report
     {
         return app(ReportService::class)->build(
-            ReportPeriod::preset((string) ($filters['period'] ?? 'month'), app(ClockInterface::class)->now(), new DateTimeZone(config('clinic.timezone'))),
+            self::period($filters ?? []),
             filled($filters['service'] ?? null) ? (string) $filters['service'] : null,
             (bool) auth()->user()?->hasAbility('report.view.financial'),
         );
@@ -80,5 +100,28 @@ class Dashboard extends BaseDashboard
         return response()->streamDownload(fn () => print ($content), "reporte-{$report->period->from->format('Y-m-d')}.{$format}", [
             'Content-Type' => $format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    /**
+     * El filtro llega del navegador, y la URL y la sesión lo guardan: un rango que no
+     * sirve cae en «Este mes», como un periodo desconocido.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private static function period(array $filters): ReportPeriod
+    {
+        $timezone = new DateTimeZone(config('clinic.timezone'));
+        $key = (string) ($filters['period'] ?? 'month');
+        $range = $key === 'custom'
+            ? ReportPeriod::tryDays((string) ($filters['from'] ?? ''), (string) ($filters['to'] ?? ''), $timezone)
+            : null;
+
+        return $range ?? ReportPeriod::preset($key, app(ClockInterface::class)->now(), $timezone);
+    }
+
+    /** El día a `$modifier` de otro: el calendario no deja elegir un rango mayor que el permitido. */
+    private static function shift(mixed $day, string $modifier): ?string
+    {
+        return filled($day) ? CarbonImmutable::parse((string) $day)->modify($modifier)->toDateString() : null;
     }
 }

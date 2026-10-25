@@ -167,6 +167,10 @@ docker compose exec app php artisan tinker --execute 'echo DB::table("jobs")->co
 - Si el worker está caído o colgado: `docker compose restart worker`.
 - Si hay trabajos fallidos por una causa ya corregida: `docker compose exec app php artisan queue:retry all`.
 - El worker atiende las colas `critical`, `mail`, `documents` y `default`, en ese orden.
+- El `scheduler` corre `appointments:reconcile` cada 5 minutos. Recupera las expiraciones y los
+  impagos que el worker no procesó, y cierra las sesiones terminadas: En curso pasa a Atendida, y
+  Agendada o Pago en caja sin llegada pasa a No Show (ADR-039). Es idempotente; para no esperar la
+  siguiente vuelta: `docker compose exec app php artisan appointments:reconcile`.
 
 ## RB-08 · Diagnosticar correo no entregado
 
@@ -235,4 +239,4 @@ Las dos alertas son urgentes: salen aun en horas de silencio (RN-17).
 
 | Fecha | Procedimiento | Quién | Resultado y tiempos |
 |---|---|---|---|
-| | | | |
+| 2026-10-25 | RB-01 | Autor | Primer despliegue a prod (ejecución 13 de CI/CD, aprobada): la imagen 11 de stage, sin construir. «Verificar desde fuera» respondió en `https://pf-clinica.duckdns.org/up` a las 09:18 UTC |

@@ -18,6 +18,9 @@ final readonly class ReportPeriod
         'year' => 'Este año',
     ];
 
+    /** Un rango elegido llega hasta un año, como «Este año»: el reporte recorre el periodo día por día. */
+    public const LONGEST_RANGE = '1 year';
+
     public function __construct(
         public DateTimeImmutable $from,
         public DateTimeImmutable $to,
@@ -40,8 +43,30 @@ final readonly class ReportPeriod
         };
     }
 
+    /**
+     * Del primer al último día elegidos, ambos incluidos y en hora local. Las fechas llegan
+     * del navegador, con o sin hora: nulo si no forman un rango válido.
+     */
+    public static function tryDays(string $first, string $last, DateTimeZone $timezone): ?self
+    {
+        $from = self::day($first, $timezone);
+        $to = self::day($last, $timezone)?->modify('+1 day');
+
+        return $from !== null && $to !== null && $from < $to && $to <= $from->modify('+'.self::LONGEST_RANGE)
+            ? new self($from, $to)
+            : null;
+    }
+
     public function contains(DateTimeImmutable $moment): bool
     {
         return $moment >= $this->from && $moment < $this->to;
+    }
+
+    private static function day(string $value, DateTimeZone $timezone): ?DateTimeImmutable
+    {
+        $date = substr($value, 0, 10);
+        $day = DateTimeImmutable::createFromFormat('!Y-m-d', $date, $timezone);
+
+        return $day !== false && $day->format('Y-m-d') === $date ? $day : null;
     }
 }
