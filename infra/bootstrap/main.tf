@@ -24,8 +24,11 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  account_id = data.aws_caller_identity.current.account_id
-  repository = "DiegoMaldonado19/clinica-app"
+  account_id          = data.aws_caller_identity.current.account_id
+  repository_owner    = "DiegoMaldonado19"
+  repository_owner_id = "80069863"
+  repository_name     = "clinica-app"
+  repository_id       = "1338087801"
 }
 
 resource "aws_s3_bucket" "state" {
@@ -68,11 +71,12 @@ data "aws_iam_policy_document" "infra_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub repos creados despues del 2026-07-15 incluyen IDs inmutables en `sub`.
     # Solo el Environment `infra`, que exige aprobacion y corre desde main.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${local.repository}:environment:infra"]
+      values   = ["repo:${local.repository_owner}@${local.repository_owner_id}/${local.repository_name}@${local.repository_id}:environment:infra"]
     }
   }
 }
