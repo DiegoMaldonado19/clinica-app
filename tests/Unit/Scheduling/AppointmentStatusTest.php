@@ -5,12 +5,13 @@ declare(strict_types=1);
 use App\Scheduling\Domain\Model\AppointmentStatus as S;
 
 // Las transiciones del diagrama de Entregable_1/04 mas las declaradas en
-// docs/fase-2: cancelar desde pago pendiente y desde caja (mockup P-02).
+// docs/fase-2: cancelar desde pago pendiente y desde caja (mockup P-02), y la
+// inasistencia de quien iba a pagar en caja (ADR-039).
 const ALLOWED = [
     'SOLICITADA' => ['CONFIRMADA_PENDIENTE_PAGO', 'RECHAZADA', 'EXPIRADA'],
     'CONFIRMADA_PENDIENTE_PAGO' => ['PAGO_EN_REVISION', 'PAGO_EN_CAJA', 'CANCELADA_IMPAGO', 'CANCELADA_SIN_CARGO', 'CANCELADA_CON_RECARGO'],
     'PAGO_EN_REVISION' => ['CONFIRMADA_PENDIENTE_PAGO', 'CANCELADA_IMPAGO', 'AGENDADA'],
-    'PAGO_EN_CAJA' => ['AGENDADA', 'CANCELADA_SIN_CARGO', 'CANCELADA_CON_RECARGO'],
+    'PAGO_EN_CAJA' => ['AGENDADA', 'CANCELADA_SIN_CARGO', 'CANCELADA_CON_RECARGO', 'NO_SHOW'],
     'AGENDADA' => ['EN_CURSO', 'CANCELADA_SIN_CARGO', 'CANCELADA_CON_RECARGO', 'NO_SHOW'],
     'EN_CURSO' => ['ATENDIDA'],
 ];

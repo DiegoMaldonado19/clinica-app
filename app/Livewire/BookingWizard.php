@@ -20,8 +20,10 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
+use Throwable;
 
 /**
  * Wizard publico A-01 -> A-04. Todo lo que llega del navegador se vuelve a
@@ -53,6 +55,9 @@ final class BookingWizard extends Component
     public bool $accepted = false;
 
     public ?string $notice = null;
+
+    /** `error` cuando algo impidio la solicitud; `info` cuando solo orienta. */
+    public string $noticeTone = 'info';
 
     public function mount(?string $serviceId = null): void
     {
@@ -90,6 +95,7 @@ final class BookingWizard extends Component
         $this->notice = $date === $this->today()->toDateString()
             ? 'Las citas para el mismo día se coordinan por teléfono. Llámanos al '.config('clinic.phone').' y con gusto te atendemos.'
             : null;
+        $this->noticeTone = 'info';
         $this->day = $this->notice === null ? $date : null;
         $this->slot = null;
     }
@@ -111,7 +117,7 @@ final class BookingWizard extends Component
         $this->validate(BookingContact::rules(), BookingContact::messages());
 
         if (BookingThrottle::tooMany(request()->ip(), $this->email)) {
-            $this->notice = 'Recibimos varias solicitudes seguidas. Espera unos minutos o llámanos al '.config('clinic.phone').'.';
+            $this->fail('Recibimos varias solicitudes seguidas. Espera unos minutos o llámanos al '.config('clinic.phone').'.');
 
             return;
         }
@@ -130,20 +136,35 @@ final class BookingWizard extends Component
             )));
         } catch (SlotUnavailable) {
             // MSG-06: se conservan los datos y se vuelve al calendario.
-            $this->notice = 'Ese horario se acaba de ocupar. Elige otro: te mostramos los más cercanos. Tus datos se conservaron.';
+            $this->fail('Ese horario se acaba de ocupar. Elige otro: te mostramos los más cercanos. Tus datos se conservaron.');
             $this->step = 2;
             $this->day = Carbon::createFromTimestamp((int) $this->slot, $this->timezone())->toDateString();
             $this->slot = null;
 
             return;
         } catch (BookingNotAllowed|DomainException $exception) {
-            $this->notice = $exception->getMessage();
+            $this->fail($exception->getMessage());
             $this->step = 2;
+
+            return;
+        } catch (Throwable $exception) {
+            Log::error('La solicitud de cita no se pudo registrar', [
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+            ]);
+            $this->fail('No pudimos enviar tu solicitud. Tus datos se conservaron: intenta de nuevo en unos minutos o llámanos al '.config('clinic.phone').'.');
 
             return;
         }
 
         $this->step = 4;
+    }
+
+    private function fail(string $message): void
+    {
+        $this->notice = $message;
+        $this->noticeTone = 'error';
     }
 
     /** @return Collection<int, Service> */

@@ -22,7 +22,7 @@
                 @if ($message['role'] === 'user')
                     <p class="ml-auto max-w-[85%] rounded-card bg-primary px-4 py-3 text-sm text-white">{{ $message['content'] }}</p>
                 @elseif ($message['role'] === 'notice')
-                    <p class="rounded-card border border-warning/40 bg-warning/10 px-4 py-3 text-sm">{{ $message['content'] }}</p>
+                    <x-ui.notice tone="warning">{{ $message['content'] }}</x-ui.notice>
                 @else
                     <div class="max-w-[85%] rounded-card border border-line bg-white px-4 py-3 text-sm">
                         <p class="whitespace-pre-line">{{ $message['content'] }}</p>
@@ -38,12 +38,7 @@
                     <p class="font-medium">{{ $booking['service'] }} · {{ $this->bookingLabel() }}</p>
 
                     @foreach ([['name', 'Nombre completo', 'text'], ['email', 'Correo electrónico', 'email'], ['phone', 'Teléfono', 'tel'], ['nit', 'NIT (o CF)', 'text']] as [$field, $label, $type])
-                        <div>
-                            <label for="chat-{{ $field }}" class="block text-xs font-medium">{{ $label }}</label>
-                            <input id="chat-{{ $field }}" type="{{ $type }}" wire:model="{{ $field }}"
-                                @class(['mt-1 h-11 w-full rounded-btn border bg-white px-3', 'border-error' => $errors->has($field), 'border-line' => ! $errors->has($field)])>
-                            @error($field)<p class="mt-1 text-xs text-error">{{ $message }}</p>@enderror
-                        </div>
+                        <x-ui.input :name="$field" :label="$label" :type="$type" id="chat-{{ $field }}" size="md" wire:model="{{ $field }}" />
                     @endforeach
 
                     <div class="rounded-btn bg-page p-3 text-xs">
@@ -64,7 +59,7 @@
 
                     <div class="flex items-center justify-between gap-2">
                         <button type="button" wire:click="cancelBooking" class="min-h-11 text-muted hover:text-ink">Elegir otro horario</button>
-                        <button type="submit" wire:loading.attr="disabled" class="min-h-11 rounded-btn bg-primary px-4 font-medium text-white hover:bg-primary/90 disabled:opacity-60">Confirmar solicitud</button>
+                        <x-ui.button type="submit" size="md" wire:loading.attr="disabled">Confirmar solicitud</x-ui.button>
                     </div>
                 </form>
             @endif

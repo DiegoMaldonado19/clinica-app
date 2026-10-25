@@ -9,6 +9,7 @@ use App\Filament\Support\StatusBadge;
 use App\Models\Appointment;
 use App\Shared\Domain\ValueObject\Money;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Pages\Page;
@@ -84,8 +85,11 @@ class ApprovalInbox extends Page implements HasTable
                 TextColumn::make('service.name')->label('Servicio'),
                 TextColumn::make('starts_at')->label('Horario solicitado')->dateTime('D j M · H:i'),
             ])
+            // Aprobar y rechazar quedan a la vista: son el trabajo de esta bandeja.
             ->recordActions([
-                ViewAction::make()
+                AppointmentActions::approve(),
+                AppointmentActions::reject(),
+                ActionGroup::make([ViewAction::make()
                     ->label('Detalle')
                     ->slideOver()
                     ->schema(fn (Appointment $record): array => [
@@ -105,9 +109,7 @@ class ApprovalInbox extends Page implements HasTable
                             ->color(StatusBadge::sla(self::minutesLeft($record))[0])
                             ->icon(StatusBadge::sla(self::minutesLeft($record))[1]),
                     ])
-                    ->extraModalFooterActions([AppointmentActions::approve(), AppointmentActions::reject()]),
-                AppointmentActions::approve(),
-                AppointmentActions::reject(),
+                    ->extraModalFooterActions([AppointmentActions::approve(), AppointmentActions::reject()])]),
             ])
             ->toolbarActions([AppointmentActions::approveSelected()])
             ->emptyStateHeading('No hay solicitudes pendientes')

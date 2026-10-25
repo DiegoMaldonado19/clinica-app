@@ -72,7 +72,7 @@ final readonly class SchedulingEventSubscriber
     public function onNoteSealed(ClinicalNoteSealed $event): void
     {
         if ($event->appointmentId !== null && $event->version === 1) {
-            $this->transitions->complete($event->appointmentId);
+            $this->transitions->completeIfInProgress($event->appointmentId);
         }
     }
 

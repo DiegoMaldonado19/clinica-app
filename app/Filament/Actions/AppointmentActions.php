@@ -36,7 +36,7 @@ final class AppointmentActions
             ->label('Aprobar')
             ->icon(Heroicon::OutlinedCheck)
             ->color('primary')
-            ->visible(fn (Appointment $record): bool => $record->statusCode() === 'SOLICITADA' && self::can('appointment.approve'))
+            ->visible(fn (Appointment $record): bool => $record->statusCode() === 'SOLICITADA' && $record->starts_at->isFuture() && self::can('appointment.approve'))
             ->action(fn (Appointment $record) => self::run(
                 fn (AppointmentTransitions $t) => $t->approve($record->id, self::userId()),
                 'Cita aprobada. Se envió el enlace de pago al paciente.',
@@ -80,7 +80,11 @@ final class AppointmentActions
             ->icon(Heroicon::OutlinedUserPlus)
             ->color('success')
             ->requiresConfirmation()
-            ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['AGENDADA', 'PAGO_EN_CAJA'], true) && self::can('appointment.checkin'))
+            // El dia de la cita y antes de que termine la sesion (ADR-039).
+            ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['AGENDADA', 'PAGO_EN_CAJA'], true)
+                && $record->starts_at->tz(config('clinic.timezone'))->isToday()
+                && $record->ends_at->isFuture()
+                && self::can('appointment.checkin'))
             ->action(fn (Appointment $record) => self::run(
                 fn (AppointmentTransitions $t) => $t->checkIn($record->id, self::userId()),
                 'Llegada registrada.',
@@ -95,7 +99,7 @@ final class AppointmentActions
             ->color('danger')
             ->requiresConfirmation()
             ->modalDescription('Se cobra el 100 % de la tarifa y el horario no se libera.')
-            ->visible(fn (Appointment $record): bool => $record->statusCode() === 'AGENDADA' && $record->starts_at->isPast() && self::can('appointment.mark_no_show'))
+            ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['AGENDADA', 'PAGO_EN_CAJA'], true) && $record->starts_at->isPast() && self::can('appointment.mark_no_show'))
             ->action(fn (Appointment $record) => self::run(function (AppointmentTransitions $t) use ($record) {
                 $t->markNoShow($record->id, self::userId());
                 AuditLog::record('appointment.no_show', 'appointment', $record->id);
@@ -111,7 +115,7 @@ final class AppointmentActions
             ->color('warning')
             ->requiresConfirmation()
             ->modalDescription(fn (Appointment $record): string => self::cancellationPreview($record))
-            ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['CONFIRMADA_PENDIENTE_PAGO', 'PAGO_EN_CAJA', 'AGENDADA'], true) && self::can('appointment.cancel.any'))
+            ->visible(fn (Appointment $record): bool => $record->canBeCancelledByPatient() && self::can('appointment.cancel.any'))
             ->action(fn (Appointment $record) => self::run(function (AppointmentTransitions $t) use ($record) {
                 $outcome = $t->cancel($record->id, self::userId());
                 AuditLog::record('appointment.cancelled', 'appointment', $record->id, ['fee_percentage' => $outcome->feePercentage]);
@@ -127,7 +131,7 @@ final class AppointmentActions
             ->color('gray')
             ->requiresConfirmation()
             ->modalDescription('Se cancela sin cargo; si ya pagó, el monto queda como crédito. El paciente recibe un aviso.')
-            ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['SOLICITADA', 'CONFIRMADA_PENDIENTE_PAGO', 'PAGO_EN_CAJA', 'AGENDADA'], true) && self::can('schedule.block'))
+            ->visible(fn (Appointment $record): bool => ($record->statusCode() === 'SOLICITADA' || $record->isCancellable()) && self::can('schedule.block'))
             ->action(fn (Appointment $record) => self::run(function (AppointmentTransitions $t) use ($record) {
                 $t->cancelByTherapist($record->id, self::userId());
                 AuditLog::record('appointment.cancelled', 'appointment', $record->id, ['by_therapist' => true]);
@@ -142,7 +146,7 @@ final class AppointmentActions
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('gray')
             ->modalDescription(fn (Appointment $record): string => 'Reprogramar cancela esta cita y agenda la nueva. '.self::cancellationPreview($record))
-            ->visible(fn (Appointment $record): bool => $record->isCancellable() && self::can('appointment.cancel.any'))
+            ->visible(fn (Appointment $record): bool => $record->canBeCancelledByPatient() && self::can('appointment.cancel.any'))
             ->schema(fn (Appointment $record): array => self::rescheduleFields($record, assisted: true))
             ->action(fn (Appointment $record, array $data) => self::rescheduleTo($record->id, $data, byTherapist: false, assisted: true, success: 'Cita reprogramada.'));
     }

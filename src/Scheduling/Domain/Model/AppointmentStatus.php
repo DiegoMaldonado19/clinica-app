@@ -59,7 +59,8 @@ enum AppointmentStatus: string
                 self::CANCELADA_SIN_CARGO, self::CANCELADA_CON_RECARGO,
             ],
             self::PAGO_EN_REVISION => [self::CONFIRMADA_PENDIENTE_PAGO, self::CANCELADA_IMPAGO, self::AGENDADA],
-            self::PAGO_EN_CAJA => [self::AGENDADA, self::CANCELADA_SIN_CARGO, self::CANCELADA_CON_RECARGO],
+            // NO_SHOW: el cierre automatico de la sesion sin llegada (ADR-039).
+            self::PAGO_EN_CAJA => [self::AGENDADA, self::CANCELADA_SIN_CARGO, self::CANCELADA_CON_RECARGO, self::NO_SHOW],
             self::AGENDADA => [self::EN_CURSO, self::CANCELADA_SIN_CARGO, self::CANCELADA_CON_RECARGO, self::NO_SHOW],
             self::EN_CURSO => [self::ATENDIDA],
             default => [],

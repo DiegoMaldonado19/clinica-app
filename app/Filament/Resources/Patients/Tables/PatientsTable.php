@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\Patients\Tables;
 
+use App\Models\Patient;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -12,6 +15,10 @@ class PatientsTable
     {
         return $table
             ->columns([
+                ImageColumn::make('avatar')
+                    ->label('')
+                    ->state(fn (Patient $record): ?string => $record->user->getFilamentAvatarUrl())
+                    ->circular(),
                 TextColumn::make('user.name')
                     ->label('Nombre')
                     ->searchable(),
@@ -28,7 +35,9 @@ class PatientsTable
             ])
             // El expediente no se borra (doc 06 §7).
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                ]),
             ]);
     }
 }

@@ -5,17 +5,26 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Widgets\Concerns\RefreshesFromDatabase;
 use App\Providers\Filament\AdminPanelProvider;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Illuminate\Contracts\Support\Htmlable;
 
 class RevenueByServiceChart extends ChartWidget
 {
-    use InteractsWithPageFilters;
+    use InteractsWithPageFilters, RefreshesFromDatabase;
 
     protected ?string $heading = 'Ingreso por servicio';
 
+    protected ?string $pollingInterval = null;
+
     protected static ?int $sort = 2;
+
+    public function getHeading(): Htmlable
+    {
+        return $this->headingWithRefresh((string) $this->heading);
+    }
 
     public static function canView(): bool
     {

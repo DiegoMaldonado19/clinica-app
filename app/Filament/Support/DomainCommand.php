@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class DomainCommand
 {
-    public static function run(callable $command, string $success): void
+    /** @return bool si el cambio quedo guardado */
+    public static function run(callable $command, string $success): bool
     {
         try {
             DB::transaction(function () use ($command): void {
@@ -24,10 +25,12 @@ final class DomainCommand
         } catch (DomainException $exception) {
             Notification::make()->danger()->title($exception->getMessage())->send();
 
-            return;
+            return false;
         }
 
         Notification::make()->success()->title($success)->send();
+
+        return true;
     }
 
     public static function userCan(string $ability): bool

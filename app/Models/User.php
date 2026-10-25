@@ -11,6 +11,7 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -21,29 +22,37 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $role_id
+ * @property string|null $avatar_path
  * @property bool $must_change_password
  * @property Carbon|null $temp_password_expires_at
  * @property bool $is_active
  * @property bool $two_factor_enabled
  */
 #[Fillable([
-    'role_id', 'name', 'email', 'phone_e164', 'password',
+    'role_id', 'name', 'email', 'phone_e164', 'avatar_path', 'password',
     'must_change_password', 'temp_password_expires_at', 'is_active',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasEmailAuthentication
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasUuids, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery, Notifiable;
 
-    /** El personal entra al panel; el paciente, solo a su portal. */
-    private const PANEL_ROLES = [
-        'admin' => ['admin', 'secretary'],
-        'portal' => ['patient'],
-    ];
+    protected static function booted(): void
+    {
+        // La foto reemplazada no queda en el bucket (ADR-041).
+        static::updated(function (User $user): void {
+            $previous = (string) $user->getOriginal('avatar_path');
+
+            if ($user->wasChanged('avatar_path') && str_starts_with($previous, 'avatars/')) {
+                Storage::disk('s3')->delete($previous);
+            }
+        });
+    }
 
     /** @return BelongsTo<Role, $this> */
     public function role(): BelongsTo
@@ -63,16 +72,25 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return in_array($ability, app(AbilityMatrix::class)->for($this->role_id), true);
     }
 
+    /** El paciente entra a su portal; cualquier otro rol, al panel del personal (ADR-040). */
+    public function isStaff(): bool
+    {
+        return $this->role->code !== 'patient';
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->is_active && in_array($this->role->code, self::PANEL_ROLES[$panel->getId()] ?? [], true);
+        return $this->is_active && $panel->getId() === $this->panelId();
     }
 
     public function homePanel(): Panel
     {
-        $panelId = collect(self::PANEL_ROLES)->search(fn (array $roles): bool => in_array($this->role->code, $roles, true));
+        return Filament::getPanel($this->panelId());
+    }
 
-        return Filament::getPanel($panelId ?: null);
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar_path ? route('avatar', ['user' => $this, 'v' => hash('crc32b', $this->avatar_path)]) : null;
     }
 
     /** El codigo por correo de la MFA de Filament, sobre la columna que ya existia. */
@@ -84,6 +102,11 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     public function toggleEmailAuthentication(bool $condition): void
     {
         $this->forceFill(['two_factor_enabled' => $condition])->save();
+    }
+
+    private function panelId(): string
+    {
+        return $this->isStaff() ? 'admin' : 'portal';
     }
 
     /**

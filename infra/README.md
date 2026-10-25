@@ -38,7 +38,7 @@ alias terraform='docker run --rm -it -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$HO
 2. **Primer `apply`**, desde tu máquina, porque el primer PR ya necesita la EC2 para desplegar dev:
    ```bash
    cd infra
-   export TF_VAR_db_admin_password="$(openssl rand -hex 24)" TF_VAR_ssh_public_key="$(cat ~/.ssh/clinica-ec2.pub)" TF_VAR_alert_email="tu-correo@ejemplo.com"
+   export TF_VAR_db_admin_password="$(openssl rand -hex 20)" TF_VAR_ssh_public_key="$(cat ~/.ssh/clinica-ec2.pub)" TF_VAR_alert_email="tu-correo@ejemplo.com"
    terraform init -backend-config="bucket=<state_bucket>"
    terraform apply
    ```

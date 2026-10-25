@@ -6,7 +6,11 @@ use App\Filament\Resources\AuditLogEntries\Pages\ListAuditLogEntries;
 use App\Models\AuditLogEntry;
 use App\Models\User;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -51,6 +55,28 @@ class AuditLogEntryResource extends Resource
                 SelectFilter::make('subject_id')->label('Expediente de')
                     ->options(fn (): array => User::query()->whereRelation('role', 'code', 'patient')->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable(),
+            ])
+            // Accion simple y no ViewAction: la IP es binaria y no puede llenar un formulario.
+            ->recordActions([
+                ActionGroup::make([
+                    Action::make('detail')
+                        ->label('Ver detalle')
+                        ->icon(Heroicon::OutlinedEye)
+                        ->modalHeading('Registro de bitácora')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Cerrar')
+                        ->schema([
+                            TextEntry::make('occurred_at')->label('Cuándo')->dateTime('d/m/Y H:i:s'),
+                            TextEntry::make('actor.name')->label('Quién')->placeholder('El sistema'),
+                            TextEntry::make('action')->label('Acción')->badge(),
+                            TextEntry::make('ip')->label('IP')->state(fn (AuditLogEntry $record): ?string => $record->ipAddress())->placeholder('—'),
+                            TextEntry::make('user_agent')->label('Navegador')->placeholder('—'),
+                            TextEntry::make('metadata')->label('Detalle')
+                                ->state(fn (AuditLogEntry $record): ?string => $record->metadata ? json_encode($record->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : null)
+                                ->fontFamily(FontFamily::Mono)
+                                ->placeholder('—'),
+                        ]),
+                ]),
             ]);
     }
 

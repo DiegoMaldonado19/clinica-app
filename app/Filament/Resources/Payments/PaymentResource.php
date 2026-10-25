@@ -12,6 +12,7 @@ use App\Shared\Domain\ValueObject\Money;
 use App\Shared\Infrastructure\Audit\AuditLog;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\IconEntry;
@@ -71,7 +72,8 @@ class PaymentResource extends Resource
                     ->icon(fn (Payment $record): Heroicon => StatusBadge::icon($record->status->code)),
                 TextColumn::make('submitted_at')->label('Subido')->dateTime('j M · H:i')->placeholder('—'),
             ])
-            ->recordActions([ViewAction::make()->label('Conciliar')]);
+            // Aprobar exige ver el comprobante (RN-09): se hace dentro, no desde el listado.
+            ->recordActions([ActionGroup::make([ViewAction::make()->label('Conciliar')])]);
     }
 
     public static function infolist(Schema $schema): Schema

@@ -8,6 +8,7 @@ use App\Filament\Resources\PsychTestAssignments\Pages\ViewPsychTestAssignment;
 use App\Filament\Support\StatusBadge;
 use App\Models\PsychTestAssignment;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -52,8 +53,10 @@ class PsychTestAssignmentResource extends Resource
                 self::statusColumn(),
             ])
             ->recordActions([
-                ViewAction::make()->label('Ver resultado')
-                    ->visible(fn (PsychTestAssignment $record): bool => $record->submitted_at !== null),
+                ActionGroup::make([
+                    ViewAction::make()->label('Ver resultado')
+                        ->visible(fn (PsychTestAssignment $record): bool => $record->submitted_at !== null),
+                ]),
             ])
             ->emptyStateHeading('Todavía no hay pruebas asignadas');
     }

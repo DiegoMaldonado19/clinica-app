@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Filament\Auth\EditProfile;
 use App\Filament\Auth\EmailCodeAuthentication;
 use App\Filament\Auth\Login;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Email\Notifications\VerifyEmailAuthentication;
 use Filament\Auth\Notifications\NoticeOfEmailChangeRequest;
 use Filament\Auth\Notifications\VerifyEmailChange;
-use Filament\Auth\Pages\EditProfile;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -94,6 +95,37 @@ it('pide el segundo factor al paciente que lo activo', function () {
 
     $this->assertGuest();
     Notification::assertSentTo($patient, VerifyEmailAuthentication::class);
+});
+
+function withBothFactors(User $user): User
+{
+    $user->saveAppAuthenticationSecret(AppAuthentication::make()->generateSecret());
+
+    return $user;
+}
+
+// F3-10: con los dos factores, la app va primero y el correo sale solo si se elige.
+it('con los dos factores no manda el correo hasta que la persona lo elige', function () {
+    $admin = withBothFactors(User::factory()->role('admin')->create());
+
+    $login = signIn('admin', $admin)->assertSet('data.multiFactor.provider', 'app');
+    Notification::assertNotSentTo($admin, VerifyEmailAuthentication::class);
+
+    $login->set('data.multiFactor.provider', 'email_code');
+
+    Notification::assertSentToTimes($admin, VerifyEmailAuthentication::class, 1);
+});
+
+it('con los dos factores entra con la aplicacion sin recibir ningun correo', function () {
+    $admin = withBothFactors(User::factory()->role('admin')->create());
+
+    signIn('admin', $admin)
+        ->set('data.multiFactor.app.code', AppAuthentication::make()->getCurrentCode($admin))
+        ->call('authenticate')
+        ->assertHasNoErrors();
+
+    $this->assertAuthenticatedAs($admin);
+    Notification::assertNotSentTo($admin, VerifyEmailAuthentication::class);
 });
 
 it('ofrece en el perfil la gestion del segundo factor', function (string $panel, string $role) {

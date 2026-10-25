@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Schemas;
 
+use App\Models\User;
 use App\Shared\Domain\ValueObject\Nit;
 use App\Shared\Domain\ValueObject\PhoneNumber;
 use App\Support\DomainRule;
 use Closure;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Los datos de una persona, definidos una vez: los usan el alta de usuarios,
@@ -42,6 +45,30 @@ final class PersonFields
                 ->rule(fn (): Closure => DomainRule::from(fn (string $value) => $value === '' ? null : PhoneNumber::fromGuatemalan($value)))
                 ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? PhoneNumber::fromGuatemalan($state)->e164 : null),
         ];
+    }
+
+    /**
+     * Opcional. Se guarda en S3 y se muestra a traves de la app (ADR-041). El
+     * estado es una ruta que el navegador puede cambiar: solo vale la del propio
+     * registro. Sin SVG, que podria ejecutar codigo en este dominio.
+     */
+    public static function avatar(): FileUpload
+    {
+        return FileUpload::make('avatar_path')
+            ->label('Foto de perfil')
+            ->avatar()
+            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+            ->maxSize(2 * 1024)
+            ->disk('s3')
+            ->directory('avatars')
+            ->preventFilePathTampering()
+            ->fetchFileInformation(false)
+            ->getUploadedFileUsing(fn (string $file, ?Model $record): ?array => $record instanceof User ? [
+                'name' => basename($file),
+                'size' => 0,
+                'type' => null,
+                'url' => $record->getFilamentAvatarUrl(),
+            ] : null);
     }
 
     public static function nit(): TextInput

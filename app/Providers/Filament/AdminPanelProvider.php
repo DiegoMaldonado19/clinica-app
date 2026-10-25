@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\EditProfile;
 use App\Filament\Auth\EmailCodeAuthentication;
 use App\Filament\Auth\Login;
 use App\Filament\Auth\RequestPasswordReset;
@@ -53,18 +54,28 @@ class AdminPanelProvider extends PanelProvider
             ->serifFont('Lora', provider: LocalFontProvider::class)
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): Htmlable => Vite::fonts())
             ->brandName('Psic. Andrea Morales')
+            ->brandLogo(asset('images/logo.svg'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('images/favicon.svg'))
+            // Lo inesperado: el detalle va a la bitacora de Laravel y la persona ve una tarjeta.
+            ->registerErrorNotification(
+                'No pudimos completar la acción',
+                'No se guardó ningún cambio. Intenta de nuevo y, si el problema sigue, avisa a la clínica.',
+            )
             ->darkMode(false);
     }
 
     /**
-     * HU-21, doc 05 §3.1: codigo por correo como metodo principal, o TOTP con 8
-     * codigos de recuperacion. Obligatorio en el panel, opcional en el portal.
+     * HU-21, doc 05 §3.1: codigo por correo o TOTP con 8 codigos de
+     * recuperacion. Obligatorio en el panel, opcional en el portal. La app va
+     * primero: Filament envia el codigo del primer factor activo al aceptar la
+     * contrasena, y con los dos activos el correo sale solo si se elige (F3-10).
      *
      * @return list<MultiFactorAuthenticationProvider>
      */
     public static function secondFactors(): array
     {
-        return [EmailCodeAuthentication::make(), AppAuthentication::make()->recoverable()];
+        return [AppAuthentication::make()->recoverable(), EmailCodeAuthentication::make()];
     }
 
     public function panel(Panel $panel): Panel
@@ -76,7 +87,7 @@ class AdminPanelProvider extends PanelProvider
             ->tap(self::theme(...))
             ->login(Login::class)
             ->passwordReset(RequestPasswordReset::class)
-            ->profile()
+            ->profile(EditProfile::class, isSimple: false)
             ->emailChangeVerification()
             ->multiFactorAuthentication(self::secondFactors(), isRequired: true)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

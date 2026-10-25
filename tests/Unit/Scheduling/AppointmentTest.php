@@ -139,6 +139,59 @@ it('cancela con el tramo de RN-06 y no desde revision de pago', function () {
     expect(fn () => $inReview->cancel($policy, new FrozenClock(gt('2026-09-16 09:00'))))->toThrow(DomainException::class);
 });
 
+function bookedAt(string $start): Appointment
+{
+    $appointment = requestAt('2026-09-15 10:00', $start);
+    $appointment->approve('u-1', 3, new FrozenClock(gt('2026-09-15 11:00')));
+    $appointment->submitPayment(new FrozenClock(gt('2026-09-15 12:00')));
+    $appointment->confirmPayment(new FrozenClock(gt('2026-09-15 13:00')));
+
+    return $appointment;
+}
+
+it('no cancela a pedido del paciente una cita que ya empezo; por indisponibilidad si (RN-18)', function () {
+    $policy = TieredCancellationPolicy::fromSetting([['h' => 24, 'pct' => 0], ['h' => 0, 'pct' => 100]]);
+
+    expect(fn () => bookedAt('2026-09-18 15:00')->cancel($policy, new FrozenClock(gt('2026-09-18 15:00'))))
+        ->toThrow(DomainException::class, 'La cita ya empezó');
+
+    $absent = bookedAt('2026-09-18 15:00');
+    $absent->cancelByTherapist('u-1', new FrozenClock(gt('2026-09-18 15:10')));
+
+    expect($absent->status())->toBe(AppointmentStatus::CANCELADA_SIN_CARGO);
+});
+
+it('no aprueba una solicitud cuya cita ya empezo', function () {
+    requestAt('2026-09-15 10:00', '2026-09-18 15:00')->approve('u-1', 3, new FrozenClock(gt('2026-09-18 15:00')));
+})->throws(DomainException::class, 'La cita ya empezó');
+
+it('registra la llegada hasta el ultimo minuto de la sesion, no despues', function () {
+    $late = bookedAt('2026-09-18 15:00');
+    $late->checkIn('u-2', new FrozenClock(gt('2026-09-18 15:49')));
+
+    expect($late->status())->toBe(AppointmentStatus::EN_CURSO)
+        ->and(fn () => bookedAt('2026-09-18 15:00')->checkIn('u-2', new FrozenClock(gt('2026-09-18 15:50'))))
+        ->toThrow(DomainException::class, 'La sesión ya terminó');
+});
+
+it('reconoce la sesion sin llegada al terminar, tambien la que se pagaba en caja (ADR-039)', function () {
+    $booked = bookedAt('2026-09-18 15:00');
+    $atDesk = Appointment::bookAssisted(
+        'a-2', 'p-1', 't-1', 's-1', TimeSlot::starting(gt('2026-09-18 15:00'), 50), Money::gtq(30000),
+        BookingSource::WALK_IN, 'u-2', 3, new FrozenClock(gt('2026-09-18 13:00')),
+    );
+
+    expect($booked->wasMissed(gt('2026-09-18 15:49')))->toBeFalse()
+        ->and($booked->wasMissed(gt('2026-09-18 15:50')))->toBeTrue()
+        ->and($atDesk->wasMissed(gt('2026-09-18 15:50')))->toBeTrue();
+
+    $atDesk->releaseTransitions();
+    $atDesk->markNoShow(null, new FrozenClock(gt('2026-09-18 15:50')));
+
+    expect($atDesk->status())->toBe(AppointmentStatus::NO_SHOW)
+        ->and($atDesk->releaseTransitions()[0]['by'])->toBeNull();
+});
+
 it('no permite saltarse la maquina de estados', function () {
     $appointment = requestAt('2026-09-15 10:00', '2026-09-18 15:00');
 

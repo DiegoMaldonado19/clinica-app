@@ -87,21 +87,31 @@ it('deja crear un servicio desde el desplegable solo a quien administra tarifas'
     expect(Service::where('name', 'Terapia grupal')->sole()->currentPrice()?->amountInCents)->toBe(20000);
 });
 
-it('crea la cuenta del paciente desde su ficha, sin pasar por Usuarios', function () {
-    $page = Livewire::actingAs($this->secretary)
+it('crea la cuenta y la ficha del paciente en un solo paso, sin pasar por Usuarios (F3-10)', function () {
+    Livewire::actingAs($this->secretary)
         ->test(CreatePatient::class)
-        ->callFormComponentAction('id', 'createOption', data: ['name' => 'Sara Ruiz', 'email' => 'sara@correo.test', 'phone_e164' => '5555-0000'])
-        ->assertHasNoFormComponentActionErrors();
-
-    $account = User::where('email', 'sara@correo.test')->sole();
-
-    $page->assertFormSet(['id' => $account->id])
-        ->fillForm(['nit' => 'CF'])
+        ->fillForm(['name' => 'Sara Ruiz', 'email' => 'sara@correo.test', 'phone_e164' => '5555-0000', 'nit' => 'CF'])
         ->call('create')
         ->assertHasNoFormErrors();
 
+    $account = User::where('email', 'sara@correo.test')->sole();
+
     expect(DB::table('patients')->where('id', $account->id)->value('nit'))->toBe('CF')
-        ->and($account->role->code)->toBe('patient');
+        ->and($account->role->code)->toBe('patient')
+        ->and($account->must_change_password)->toBeTrue()
+        ->and(dispatchedTemplates($account->id))->toBe(['NT-02']);
+});
+
+it('no crea una cuenta de paciente con un correo que ya existe', function () {
+    User::factory()->role('patient')->create(['email' => 'sara@correo.test']);
+
+    Livewire::actingAs($this->secretary)
+        ->test(CreatePatient::class)
+        ->fillForm(['name' => 'Sara Ruiz', 'email' => 'sara@correo.test'])
+        ->call('create')
+        ->assertHasFormErrors(['email']);
+
+    expect(User::where('email', 'sara@correo.test')->count())->toBe(1);
 });
 
 it('crea una categoria desde el desplegable del servicio', function () {

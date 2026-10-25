@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Faqs;
 use App\Filament\Resources\Faqs\Pages\ManageFaqs;
 use App\Models\Faq;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
@@ -46,7 +47,7 @@ class FaqResource extends Resource
                 TextColumn::make('question')->label('Pregunta')->wrap(),
                 TextColumn::make('answer')->label('Respuesta')->limit(90)->wrap(),
             ])
-            ->recordActions([EditAction::make(), DeleteAction::make()])
+            ->recordActions([ActionGroup::make([EditAction::make(), DeleteAction::make()])])
             ->emptyStateHeading('Todavía no hay preguntas frecuentes');
     }
 
