@@ -19,8 +19,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * HU-13. La lista es administrativa; el resultado solo se ve al abrir una
- * prueba, y esa lectura queda en bitacora (RN-12).
+ * HU-13. La lista no muestra resultados: verlos exige abrir la prueba, y cada
+ * apertura queda en bitacora (RN-12).
  */
 class PsychTestAssignmentResource extends Resource
 {
@@ -46,8 +46,9 @@ class PsychTestAssignmentResource extends Resource
             ->columns([
                 TextColumn::make('record.patient.name')->label('Paciente')->searchable(),
                 TextColumn::make('test')->label('Prueba')->formatStateUsing(fn (PsychTest $state): string => $state->value),
-                TextColumn::make('created_at')->label('Asignada')->date('j M Y'),
-                TextColumn::make('due_at')->label('Fecha límite')->date('j M Y'),
+                // date() formatea en UTC: sin la zona de la clinica, el limite de las 23:59 aparece con el dia siguiente.
+                TextColumn::make('created_at')->label('Asignada')->date('j M Y', config('clinic.timezone')),
+                TextColumn::make('due_at')->label('Fecha límite')->date('j M Y', config('clinic.timezone')),
                 self::statusColumn(),
             ])
             ->recordActions([
@@ -87,7 +88,7 @@ class PsychTestAssignmentResource extends Resource
         ]);
     }
 
-    /** El mismo estado que ve el paciente en «Mis pruebas». */
+    /** Columna de estado compartida con «Mis pruebas» del portal. */
     public static function statusColumn(): TextColumn
     {
         return TextColumn::make('status')->label('Estado')->badge()

@@ -35,8 +35,9 @@ el expediente no abre. El último comando recrea los contenedores para que la le
 | Consola de MinIO | http://localhost:9001 |
 
 El asistente (`chatbot/`) no publica puertos: el widget de la landing le habla desde Laravel. Sin
-`ANTHROPIC_API_KEY` en el `.env`, solo responde la rama de crisis y en lo demás el widget ofrece
-el teléfono de la clínica. En local, el token entre Laravel y el asistente tiene un valor de serie.
+`ANTHROPIC_API_KEY` en el `.env`, el widget no ofrece chat. En su lugar muestra las preguntas
+frecuentes, el enlace para agendar, el teléfono y la línea de crisis (ADR-038). En local, el token
+entre Laravel y el asistente tiene un valor de serie.
 
 ### Cuentas de demostración
 
@@ -104,8 +105,9 @@ privado por entorno. Todo se crea con Terraform (`infra/`) y se despliega con Gi
 - `scripts/deploy.sh` y `scripts/tls.sh` corren en la EC2: base y usuario del entorno,
   migraciones, contenedores y el certificado de Let's Encrypt.
 
-Los pasos del primer despliegue y los secretos de cada Environment están en
-[`infra/README.md`](infra/README.md).
+Los pasos del primer despliegue y los secretos de cada Environment están en la guía de despliegue
+de la entrega (`Entregable_Final/guia-de-despliegue.md`). Qué crea Terraform y cómo se aplica está
+en [`infra/README.md`](infra/README.md).
 
 ## Tecnologías y versiones
 
@@ -115,10 +117,10 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 
 | Tecnología | Versión |
 |---|---|
-| PHP | 8.4.26 |
+| PHP | 8.4.27 |
 | Laravel | 13.31.0 |
 | Filament | 5.8.4 |
-| Livewire | 4.4.0 |
+| Livewire | 4.4.8 |
 | Vite · Tailwind CSS | 8.2.2 · 4.3.3 |
 | laravel-dompdf · dompdf (PDF) | 3.1.2 · 3.1.6 |
 | OpenSpout (XLSX) | 4.32.0 |
@@ -145,7 +147,7 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 
 | Imagen | Uso |
 |---|---|
-| `php:8.4.26-fpm-alpine` | Base de los destinos `dev` y `prod`; la CI corre dentro de `dev` |
+| `php:8.4.27-fpm-alpine` | Base de los destinos `dev` y `prod`; la CI corre dentro de `dev` |
 | `mlocati/php-extension-installer:2.12.0` | Instala las extensiones de PHP |
 | `composer:2.9.8` | Composer dentro de `dev` y `prod` |
 | `node:24.21.0-alpine` | Construcción de los assets y Vite en local |
@@ -187,3 +189,6 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | [`docs/fase-2/04`](docs/fase-2/04-manual-de-usuario.md) | Manual de usuario |
 | [`docs/fase-2/05`](docs/fase-2/05-documentacion-de-usuario.md) | Qué ve y qué puede hacer cada perfil |
 | [`docs/api/openapi.yaml`](docs/api/openapi.yaml) | Contrato de la API del asistente (OpenAPI 3.1) |
+| [`infra/README.md`](infra/README.md) | Paquete de Terraform: qué crea en AWS y cómo se aplica |
+| [`docs/runbook.md`](docs/runbook.md) | Runbook de operación RB-01…RB-12 |
+| [`docs/adr/fase-3.md`](docs/adr/fase-3.md) | Decisiones de la Fase 3 (ADR-023…ADR-038) |

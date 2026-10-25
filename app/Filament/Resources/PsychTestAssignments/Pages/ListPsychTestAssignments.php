@@ -26,7 +26,7 @@ class ListPsychTestAssignments extends ListRecords
                 ->label('Asignar prueba')
                 ->visible(DomainCommand::userCan('psych_test.assign'))
                 ->schema([
-                    // Con ficha: el expediente se abre sobre `patients`.
+                    // Solo usuarios con ficha en `patients`: el expediente clinico cuelga de ella.
                     Select::make('patient_id')->label('Paciente')->searchable()->required()
                         ->options(fn (): array => User::query()->whereIn('id', Patient::query()->select('id'))->orderBy('name')->pluck('name', 'id')->all()),
                     Select::make('test')->label('Prueba')->required()

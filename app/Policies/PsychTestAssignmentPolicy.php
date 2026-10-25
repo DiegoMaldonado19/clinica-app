@@ -8,9 +8,9 @@ use App\Models\PsychTestAssignment;
 use App\Models\User;
 
 /**
- * Los resultados son contenido clinico (doc 05 §4.3): recepcion no los ve. Sin
- * create, update ni delete: se asigna con PsychTestService y nada clinico se
- * edita ni se borra.
+ * Resultados clinicos (doc 05 §4.3): exige clinical_note.view, que recepcion no
+ * tiene. Sin create, update ni delete: se asigna con PsychTestService y nada
+ * clinico se edita ni se borra.
  */
 class PsychTestAssignmentPolicy
 {

@@ -27,10 +27,10 @@ class UsersTable
                     ->label('Activo')
                     ->boolean(),
                 IconColumn::make('must_change_password')
-                    ->label('Debe cambiar contrasena')
+                    ->label('Debe cambiar contraseña')
                     ->boolean(),
                 TextColumn::make('last_login_at')
-                    ->label('Ultimo ingreso')
+                    ->label('Último ingreso')
                     ->dateTime()
                     ->sortable(),
             ])

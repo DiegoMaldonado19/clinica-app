@@ -5,7 +5,7 @@
 #   --target prod  codigo dentro de la imagen, opcache sellado. Es la que va al registro.
 
 # ─────────────────────────────── base ────────────────────────────────
-FROM php:8.4.26-fpm-alpine AS base
+FROM php:8.4.27-fpm-alpine AS base
 
 COPY --from=mlocati/php-extension-installer:2.12.0 /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions pdo_mysql redis gd intl zip bcmath opcache \
@@ -76,6 +76,9 @@ COPY --from=assets /app/public/build ./public/build
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
     && rm /usr/local/bin/composer \
     && chown -R www-data:www-data storage bootstrap/cache
+
+# php-fpm, worker y scheduler corren como www-data (uid 82), no como root.
+USER www-data
 
 # ──────────────────────────────── web ────────────────────────────────
 # nginx con TLS y los estaticos ya construidos. Sale del mismo build que `prod`,

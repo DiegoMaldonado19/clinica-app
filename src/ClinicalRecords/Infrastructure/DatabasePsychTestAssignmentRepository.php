@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Las respuestas se cifran como el SOAP y el resultado no se guarda: se
- * calcula de ellas, asi no puede quedar desalineado.
+ * Cifra las respuestas igual que el SOAP. No guarda el resultado: se recalcula
+ * de las respuestas al leer.
  */
 final readonly class DatabasePsychTestAssignmentRepository implements PsychTestAssignmentRepository
 {
