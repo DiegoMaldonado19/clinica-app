@@ -23,8 +23,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * MU-06 · HU-13. El paciente responde; la puntuacion es de la psicologa y aqui
- * no se muestra. Todo se limita al paciente en sesion (RN-13).
+ * MU-06 · HU-13. El paciente responde sus pruebas. No muestra la puntuacion, que
+ * es de la psicologa, y solo consulta las del paciente en sesion (RN-13).
  */
 class MyTests extends Page implements HasTable
 {
@@ -52,7 +52,7 @@ class MyTests extends Page implements HasTable
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('test')->label('Prueba')->formatStateUsing(fn (PsychTest $state): string => $state->label()),
-                TextColumn::make('due_at')->label('Responder hasta')->date('l j \d\e F'),
+                TextColumn::make('due_at')->label('Responder hasta')->date('l j \d\e F', config('clinic.timezone')),
                 PsychTestAssignmentResource::statusColumn(),
             ])
             ->recordActions([

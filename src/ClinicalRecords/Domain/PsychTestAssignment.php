@@ -78,7 +78,7 @@ final class PsychTestAssignment
         return $result;
     }
 
-    /** False si no toca: ya respondida, ya marcada o todavia a tiempo. */
+    /** Devuelve false si ya fue respondida, ya fue marcada o todavia no vence. */
     public function expire(ClockInterface $clock): bool
     {
         if ($this->submittedAt !== null || $this->expiredAt !== null || $clock->now() <= $this->dueAt) {

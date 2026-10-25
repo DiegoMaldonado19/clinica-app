@@ -57,9 +57,12 @@ it('asigna con fecha limite: NT-16 sin nombrar la prueba y pendiente en el porta
         ->and($mail->getTextBody())->toContain('martes 27 de octubre')->toContain('/portal/mis-pruebas')->not->toContain('PHQ')
         ->and(DB::table('audit_log')->where('action', 'psych_test.assigned')->where('actor_user_id', $this->psychologist->id)->exists())->toBeTrue();
 
+    // due_on 27 se guarda como el 28 a las 05:59 UTC; las dos tablas deben mostrar el 27.
     Livewire::actingAs($this->patient)->test(MyTests::class)
         ->assertCanSeeTableRecords(PsychTestAssignment::whereKey($id)->get())
-        ->assertSee('Pendiente');
+        ->assertSee('Pendiente')
+        ->assertSee('martes 27 de octubre');
+    Livewire::actingAs($this->psychologist)->test(ListPsychTestAssignments::class)->assertSee('27 oct. 2026');
 });
 
 it('guarda las respuestas cifradas y calcula el resultado; sin señal de riesgo no hay alerta', function () {

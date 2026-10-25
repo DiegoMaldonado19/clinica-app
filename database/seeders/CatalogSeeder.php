@@ -17,7 +17,7 @@ class CatalogSeeder extends Seeder
     {
         $this->seed('roles', [
             ['code' => 'admin',     'label' => 'Administradora'],
-            ['code' => 'secretary', 'label' => 'Recepcion'],
+            ['code' => 'secretary', 'label' => 'Recepción'],
             ['code' => 'patient',   'label' => 'Paciente'],
         ]);
 
@@ -44,24 +44,24 @@ class CatalogSeeder extends Seeder
             ['code' => 'patient.update',             'label' => 'Actualizar paciente'],
             ['code' => 'clinical_intake.view',       'label' => 'Ver ficha administrativa'],
             ['code' => 'clinical_intake.create',     'label' => 'Crear ficha administrativa'],
-            ['code' => 'clinical_note.view',         'label' => 'Ver nota clinica'],
-            ['code' => 'clinical_note.create',       'label' => 'Crear nota clinica'],
-            ['code' => 'clinical_note.seal',         'label' => 'Sellar nota clinica'],
-            ['code' => 'clinical_note.amend',        'label' => 'Enmendar nota clinica'],
-            ['code' => 'psych_test.assign',          'label' => 'Asignar prueba psicometrica'],
-            ['code' => 'psych_test.answer',          'label' => 'Responder prueba psicometrica'],
+            ['code' => 'clinical_note.view',         'label' => 'Ver nota clínica'],
+            ['code' => 'clinical_note.create',       'label' => 'Crear nota clínica'],
+            ['code' => 'clinical_note.seal',         'label' => 'Sellar nota clínica'],
+            ['code' => 'clinical_note.amend',        'label' => 'Enmendar nota clínica'],
+            ['code' => 'psych_test.assign',          'label' => 'Asignar prueba psicométrica'],
+            ['code' => 'psych_test.answer',          'label' => 'Responder prueba psicométrica'],
             ['code' => 'user.create.staff',          'label' => 'Crear usuario de personal'],
             ['code' => 'report.view.operational',    'label' => 'Ver reportes operativos'],
             ['code' => 'report.view.financial',      'label' => 'Ver reportes financieros'],
-            ['code' => 'settings.manage',            'label' => 'Administrar parametros'],
-            ['code' => 'audit.view',                 'label' => 'Ver bitacora de auditoria'],
+            ['code' => 'settings.manage',            'label' => 'Administrar parámetros'],
+            ['code' => 'audit.view',                 'label' => 'Ver bitácora de auditoría'],
         ]);
 
         // Los 13 estados de la maquina (doc 08 §1). El orden es el del diagrama.
         $this->seed('appointment_statuses', [
             ['code' => 'SOLICITADA',                'label' => 'Solicitada'],
             ['code' => 'CONFIRMADA_PENDIENTE_PAGO', 'label' => 'Confirmada, pendiente de pago'],
-            ['code' => 'PAGO_EN_REVISION',          'label' => 'Pago en revision'],
+            ['code' => 'PAGO_EN_REVISION',          'label' => 'Pago en revisión'],
             ['code' => 'PAGO_EN_CAJA',              'label' => 'Pago en caja'],
             ['code' => 'AGENDADA',                  'label' => 'Agendada'],
             ['code' => 'EN_CURSO',                  'label' => 'En curso'],
@@ -71,12 +71,12 @@ class CatalogSeeder extends Seeder
             ['code' => 'CANCELADA_IMPAGO',          'label' => 'Cancelada por impago'],
             ['code' => 'CANCELADA_SIN_CARGO',       'label' => 'Cancelada sin cargo'],
             ['code' => 'CANCELADA_CON_RECARGO',     'label' => 'Cancelada con recargo'],
-            ['code' => 'NO_SHOW',                   'label' => 'No se presento'],
+            ['code' => 'NO_SHOW',                   'label' => 'No se presentó'],
         ]);
 
         $this->seed('payment_statuses', [
             ['code' => 'PENDIENTE',   'label' => 'Pendiente'],
-            ['code' => 'EN_REVISION', 'label' => 'En revision'],
+            ['code' => 'EN_REVISION', 'label' => 'En revisión'],
             ['code' => 'APROBADO',    'label' => 'Aprobado'],
             ['code' => 'RECHAZADO',   'label' => 'Rechazado'],
             ['code' => 'EN_CAJA',     'label' => 'En caja'],
@@ -98,11 +98,11 @@ class CatalogSeeder extends Seeder
             ['code' => 'INTERBANCO', 'label' => 'Interbanco'],
         ]);
 
-        // WHATSAPP y SMS quedan sembrados pero inactivos: la fase 2 los activa
-        // sin migracion (doc 06 §2).
+        // is_active no activa un canal: lo decide la configuracion (ADR-035), porque esta
+        // semilla reescribe la columna en cada despliegue.
         $this->seed('notification_channels', [
             ['code' => 'MAIL',     'label' => 'Correo electrónico'],
-            ['code' => 'IN_APP',   'label' => 'En la aplicacion'],
+            ['code' => 'IN_APP',   'label' => 'En la aplicación'],
             ['code' => 'WHATSAPP', 'label' => 'WhatsApp', 'is_active' => false],
             ['code' => 'SMS',      'label' => 'Mensaje de texto', 'is_active' => false],
         ]);
@@ -116,11 +116,11 @@ class CatalogSeeder extends Seeder
         ]);
 
         $this->seed('cancellation_reasons', [
-            ['code' => 'PACIENTE_SOLICITO',        'label' => 'El paciente lo solicito'],
-            ['code' => 'TERAPEUTA_NO_DISPONIBLE',  'label' => 'La terapeuta no esta disponible'],
+            ['code' => 'PACIENTE_SOLICITO',        'label' => 'El paciente lo solicitó'],
+            ['code' => 'TERAPEUTA_NO_DISPONIBLE',  'label' => 'La terapeuta no está disponible'],
             ['code' => 'IMPAGO',                   'label' => 'Pago no acreditado'],
-            ['code' => 'SLA_VENCIDO',              'label' => 'SLA de aprobacion vencido'],
-            ['code' => 'NO_SHOW',                  'label' => 'El paciente no se presento'],
+            ['code' => 'SLA_VENCIDO',              'label' => 'SLA de aprobación vencido'],
+            ['code' => 'NO_SHOW',                  'label' => 'El paciente no se presentó'],
         ]);
 
         $this->seed('service_categories', [
@@ -138,9 +138,9 @@ class CatalogSeeder extends Seeder
         ]);
 
         $this->seed('document_types', [
-            ['code' => 'DPI',       'label' => 'Documento personal de identificacion'],
+            ['code' => 'DPI',       'label' => 'Documento personal de identificación'],
             ['code' => 'PASAPORTE', 'label' => 'Pasaporte'],
-            ['code' => 'NIT',       'label' => 'Numero de identificacion tributaria'],
+            ['code' => 'NIT',       'label' => 'Número de identificación tributaria'],
         ]);
     }
 

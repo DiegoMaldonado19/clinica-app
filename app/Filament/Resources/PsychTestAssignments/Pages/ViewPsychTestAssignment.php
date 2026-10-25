@@ -7,7 +7,7 @@ use App\Models\PsychTestAssignment;
 use App\Shared\Infrastructure\Audit\AuditLog;
 use Filament\Resources\Pages\ViewRecord;
 
-/** RN-12: cada lectura del resultado queda en bitacora, y el intento denegado tambien. */
+/** RN-12: registra en bitacora cada lectura del resultado y cada intento denegado. */
 class ViewPsychTestAssignment extends ViewRecord
 {
     protected static string $resource = PsychTestAssignmentResource::class;

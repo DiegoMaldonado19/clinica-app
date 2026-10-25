@@ -47,7 +47,7 @@ class PatientForm
                     ->label('Tipo de documento')
                     ->options(fn (): array => self::catalog('document_types')),
                 TextInput::make('document_number')
-                    ->label('Numero de documento')
+                    ->label('Número de documento')
                     ->maxLength(30),
                 Select::make('sex_id')
                     ->label('Sexo')
@@ -59,7 +59,7 @@ class PatientForm
                     ->label('Contacto de emergencia')
                     ->maxLength(150),
                 TextInput::make('emergency_contact_phone_e164')
-                    ->label('Telefono de emergencia')
+                    ->label('Teléfono de emergencia')
                     ->tel()
                     ->maxLength(20),
                 PersonFields::nit(),

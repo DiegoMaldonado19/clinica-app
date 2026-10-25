@@ -1,12 +1,13 @@
 {{-- C-01 · La línea de crisis queda fija en el pie: no depende de que el clasificador acierte (RF-62). --}}
 <div x-data="{ open: false }" class="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-3">
     <section x-show="open" style="display: none" aria-label="Asistente de la clínica"
-        class="flex h-[min(680px,calc(100vh-6rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-line bg-page shadow-float">
+        @class(['flex w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-line bg-page shadow-float', 'h-[min(680px,calc(100vh-6rem))]' => config('services.chatbot.enabled')])>
         <header class="flex items-center justify-between bg-primary px-4 py-3 text-white">
             <p class="font-medium">Asistente</p>
             <button type="button" x-on:click="open = false" class="inline-flex size-11 items-center justify-center rounded-btn hover:bg-white/10" aria-label="Cerrar el asistente">✕</button>
         </header>
 
+        @if (config('services.chatbot.enabled'))
         <p class="bg-sand px-4 py-2 text-xs leading-relaxed text-ink">
             Soy un asistente automatizado y no sustituyo la atención profesional. Tus mensajes los procesa un proveedor de inteligencia artificial.
         </p>
@@ -87,6 +88,14 @@
                 </div>
                 @error('draft')<p class="mt-1 text-xs text-error">{{ $message }}</p>@enderror
             </form>
+        @endif
+        @else
+            <p class="px-4 py-4 text-sm">
+                El asistente no está disponible por ahora. Revisa las
+                <a href="#preguntas" x-on:click="open = false" class="font-medium underline">preguntas frecuentes</a>,
+                <a href="{{ route('booking') }}" class="font-medium underline">agenda una cita</a>
+                o llámanos al {{ config('clinic.phone') }}.
+            </p>
         @endif
 
         <footer class="border-t border-line bg-page px-4 py-2 text-xs text-ink">

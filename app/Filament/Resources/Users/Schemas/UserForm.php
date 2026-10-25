@@ -23,7 +23,7 @@ class UserForm
                 // En el alta se genera una credencial temporal (RN-15); al editar,
                 // dejarla vacia conserva la actual.
                 TextInput::make('password')
-                    ->label('Contrasena temporal')
+                    ->label('Contraseña temporal')
                     ->password()
                     ->revealable()
                     ->rule(Password::defaults())

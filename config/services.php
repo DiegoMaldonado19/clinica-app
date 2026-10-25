@@ -32,6 +32,8 @@ return [
     'chatbot' => [
         'url' => env('CHATBOT_URL', 'http://chatbot:8000'),
         'token' => env('CHATBOT_API_TOKEN'),
+        // ADR-038: sin ANTHROPIC_API_KEY el widget oculta el chat y muestra FAQ, agenda, telefono y linea de crisis.
+        'enabled' => filled(env('ANTHROPIC_API_KEY')),
     ],
 
     // F3-07: listo sin configurar. Sin token ni numero, el canal no existe y todo sale por correo.

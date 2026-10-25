@@ -330,8 +330,9 @@ jobs:
           ANTHROPIC_API_KEY='${{ secrets.ANTHROPIC_API_KEY }}'
           CHATBOT_API_TOKEN='${{ secrets.CHATBOT_API_TOKEN }}'
           EOF
-          # Un secreto sin definir llega vacio: mejor fallar aqui que sembrar a la psicologa sin correo.
-          if grep "=''$" .env; then echo "::error::Faltan secretos o variables del Environment"; exit 1; fi
+          # Un valor vacio detiene el despliegue: ADMIN_EMAIL vacio sembraria a la psicologa sin correo.
+          # ANTHROPIC_API_KEY es la unica excepcion: sin ella el widget oculta el chat (ADR-038).
+          if grep -v '^ANTHROPIC_API_KEY=' .env | grep "=''$"; then echo "::error::Faltan secretos o variables del Environment"; exit 1; fi
           # WhatsApp es opcional (F3-07): sin sus dos secretos el canal no existe y todo sale por correo.
           if [ -n "$WHATSAPP_TOKEN" ] && [ -n "$WHATSAPP_PHONE_NUMBER_ID" ]; then
             printf "WHATSAPP_TOKEN='%s'\nWHATSAPP_PHONE_NUMBER_ID='%s'\n" "$WHATSAPP_TOKEN" "$WHATSAPP_PHONE_NUMBER_ID" >> .env

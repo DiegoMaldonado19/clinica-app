@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Lectura para el panel y el portal. Escribe unicamente PsychTestService.
+ * Solo lectura para el panel y el portal; las escrituras pasan por PsychTestService.
  *
  * @property PsychTest $test
  * @property Carbon $due_at
@@ -30,7 +30,7 @@ class PsychTestAssignment extends Model
         return $this->belongsTo(ClinicalRecord::class, 'clinical_record_id');
     }
 
-    /** Se deriva al leer: la vencida lo es aunque la tarea horaria todavia no la marque. */
+    /** Calculado al leer: pasada la fecha es VENCIDA aunque psych-tests:expire aun no la marque. */
     public function statusCode(): string
     {
         return match (true) {

@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
-    config(['services.chatbot.token' => 'token-de-prueba']);
+    config(['services.chatbot.token' => 'token-de-prueba', 'services.chatbot.enabled' => true]);
     $this->travelTo(gtAt('2026-09-15 10:00'));
 });
 
@@ -28,6 +28,17 @@ it('muestra siempre la linea de crisis y el aviso del proveedor de IA (RF-62)', 
         ->assertSee('Línea de crisis 24/7')
         ->assertSee(config('clinic.crisis_line'))
         ->assertSee('Tus mensajes los procesa un proveedor de inteligencia artificial.');
+});
+
+it('sin la llave del modelo deja la FAQ, la agenda y la linea de crisis, sin chat (ADR-038)', function () {
+    config(['services.chatbot.enabled' => false]);
+
+    $this->get('/')
+        ->assertSee('El asistente no está disponible por ahora.')
+        ->assertSee('Línea de crisis 24/7')
+        ->assertSee(config('clinic.crisis_line'))
+        ->assertDontSee('Escribe tu mensaje')
+        ->assertDontSee('Tus mensajes los procesa un proveedor de inteligencia artificial.');
 });
 
 it('envia la conversacion al asistente y muestra la respuesta con su fuente (HU-24)', function () {
