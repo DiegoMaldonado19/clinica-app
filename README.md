@@ -93,9 +93,9 @@ privado por entorno. Todo se crea con Terraform (`infra/`) y se despliega con Gi
 
 | Evento | Entorno | URL |
 |---|---|---|
-| Pull Request hacia `main` | dev | `https://<dominio>:8082` |
-| Merge a `main` | stage | `https://<dominio>:8081` |
-| Despacho manual de `CI/CD` desde `main`, con aprobación | prod | `https://<dominio>` |
+| Pull Request hacia `main` | dev | `https://pf-clinica.duckdns.org:8082` |
+| Merge a `main` | stage | `https://pf-clinica.duckdns.org:8081` |
+| Despacho manual de `CI/CD` desde `main`, con aprobación | prod | `https://pf-clinica.duckdns.org` |
 
 - `ci-cd.yml` construye las imágenes (`clinica-app`, `clinica-chatbot` y `clinica-web`) una vez
   por árbol de git y promueve esas mismas de dev a stage y a prod. Prod nunca construye: recibe
@@ -191,4 +191,4 @@ Las dependencias de Composer y npm quedan fijadas por `composer.lock` y `package
 | [`docs/api/openapi.yaml`](docs/api/openapi.yaml) | Contrato de la API del asistente (OpenAPI 3.1) |
 | [`infra/README.md`](infra/README.md) | Paquete de Terraform: qué crea en AWS y cómo se aplica |
 | [`docs/runbook.md`](docs/runbook.md) | Runbook de operación RB-01…RB-12 |
-| [`docs/adr/fase-3.md`](docs/adr/fase-3.md) | Decisiones de la Fase 3 (ADR-023…ADR-038) |
+| [`docs/adr/fase-3.md`](docs/adr/fase-3.md) | Decisiones de la Fase 3 (ADR-023…ADR-041) |

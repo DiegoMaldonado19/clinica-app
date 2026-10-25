@@ -89,9 +89,9 @@ Lo que ve el personal y lo que ve el paciente.
 | Solicitada | En revisión | Recepción aprueba o rechaza; si nadie responde, vence |
 | Confirmada, pendiente de pago | Pago pendiente | El paciente sube su comprobante o elige efectivo |
 | Pago en revisión | Revisando tu pago | Recepción concilia |
-| Pago en caja | Pagas al llegar | Se cobra al registrar la llegada |
+| Pago en caja | Pagas al llegar | Se cobra al registrar la llegada; sin llegada, inasistencia |
 | Agendada | Confirmada | Llegada, inasistencia o cancelación |
-| En curso | En sesión | La psicóloga sella la nota |
+| En curso | En sesión | Pasa a Atendida al sellar la nota o al terminar la sesión |
 | Atendida | Atendida | — |
 | Rechazada | No confirmada | — |
 | Expirada | Venció sin respuesta | El horario ya se liberó |
@@ -111,12 +111,13 @@ la pantalla completa, que sigue disponible.
 | Desplegable | Qué se crea | Quién ve el **+** |
 |---|---|---|
 | Paciente, al agendar por teléfono | Cuenta y ficha del paciente, con su acceso al portal por correo | Recepción y psicóloga |
-| Cuenta, en la ficha del paciente | Cuenta de paciente con su acceso al portal | Recepción y psicóloga |
 | Servicio, al agendar por teléfono | Servicio con su tarifa inicial | Solo la psicóloga |
 | Categoría, en el servicio | Categoría de servicio | Solo la psicóloga |
+| Rol, en el usuario | Rol del personal con sus permisos | Solo la psicóloga |
 
-Los catálogos fijos (roles, tipos de documento, sexo, estados) no se crean desde un
-desplegable: su contenido lo define el diseño y lo usan las reglas del sistema.
+El alta en **Pacientes** trae los datos de la cuenta del portal en el mismo formulario. Los
+catálogos fijos (tipos de documento, sexo, estados) no se crean desde un desplegable: su contenido
+lo define el diseño y lo usan las reglas del sistema.
 
 ## 5. Lo que el sistema hace solo
 
@@ -125,10 +126,14 @@ desplegable: su contenido lo define el diseño y lo usan las reglas del sistema.
 | Vencer una solicitud sin respuesta y liberar el horario | A las 24 h, o 72 h si llegó en fin de semana |
 | Cancelar una cita sin pago aprobado | 3 horas antes de la cita. Un comprobante en revisión **no** la salva; el pago en caja sí |
 | Enviar recordatorios | 24 h y 2 h antes, solo si la cita sigue vigente |
-| Recuperar lo que se haya quedado atrás | Cada 15 minutos, si el procesador de tareas estuvo detenido |
+| Pasar a Atendida la cita En curso | Al terminar la sesión |
+| Marcar No se presentó la cita Agendada o en Pago en caja sin llegada registrada | Al terminar la sesión |
+| Recuperar lo que se haya quedado atrás | Cada 5 minutos, si el procesador de tareas estuvo detenido |
 | Diferir correos | Entre las 21:00 y las 07:00 |
 
-Nada de esto requiere intervención. Todos los plazos se cambian en **Plazos y políticas**.
+Nada de esto requiere intervención. Todos los plazos se cambian en **Plazos y políticas**. El
+cierre de la sesión corre en la revisión de cada 5 minutos: registra la llegada antes de que
+termine, porque una cita No se presentó no admite nota clínica.
 
 ## 6. Secuencia de pantallas
 

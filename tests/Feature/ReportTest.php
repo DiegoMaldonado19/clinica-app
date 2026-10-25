@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Analytics\Domain\Kpi;
+use App\Analytics\Domain\Report;
+use App\Analytics\Infrastructure\ReportFileExporter;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\KpiOverview;
 use App\Filament\Widgets\OccupancyByWeekdayChart;
@@ -112,4 +114,28 @@ it('muestra a recepcion los indicadores operativos sin ninguna cifra de ingresos
     expect(RevenueByServiceChart::canView())->toBeFalse()
         ->and($sheets)->not->toHaveKey('Ingreso por servicio')
         ->and(array_column($sheets['Indicadores'], 0))->not->toContain('KPI-07');
+});
+
+// F3-11: el rango personalizado llega del navegador con o sin hora.
+it('calcula el tablero de un rango elegido con su ultimo dia, y cae en «Este mes» si el rango no sirve', function () {
+    $this->actingAs($this->admin);
+    $attended = fn (Report $report): mixed => collect($report->indicators)->firstWhere('label', 'Sesiones atendidas')?->value;
+    $oneDay = Dashboard::report(['period' => 'custom', 'from' => '2026-09-18 00:00:00', 'to' => '2026-09-18 00:00:00']);
+
+    expect($oneDay->period->from->format('Y-m-d'))->toBe('2026-09-18')
+        ->and($attended($oneDay))->toBe(1)
+        ->and($attended(Dashboard::report(['period' => 'custom', 'from' => '2026-09-01', 'to' => '2026-09-17'])))->toBe(0)
+        ->and(Dashboard::report(['period' => 'custom', 'from' => '2026-09-18', 'to' => '2027-09-18'])->period)
+        ->toEqual(Dashboard::report(['period' => 'month'])->period);
+});
+
+it('arranca el rango personalizado con las fechas del periodo que se veia, y lo exporta', function () {
+    $dashboard = Livewire::actingAs($this->admin)->test(Dashboard::class)
+        ->set('filters.period', '90d')
+        ->set('filters.period', 'custom');
+
+    $sheets = xlsxSheets($dashboard->callAction('exportXlsx')->effects['download']['content']);
+
+    expect($sheets['Indicadores'][0][0])
+        ->toBe(ReportFileExporter::title(Dashboard::report(['period' => 'custom', 'from' => '2026-06-21', 'to' => '2026-09-18'])));
 });
