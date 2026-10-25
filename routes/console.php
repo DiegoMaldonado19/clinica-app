@@ -16,8 +16,9 @@ Artisan::command('inspire', function () {
 
 /*
  | T-10, doc 09 §10. Red de seguridad de los trabajos diferidos: si el procesador
- | de colas estuvo caido, recupera expiraciones e impagos. Es idempotente porque
- | los handlers verifican el estado antes de actuar.
+ | de colas estuvo caido, recupera expiraciones e impagos. Ademas cierra las
+ | sesiones terminadas (ADR-039). Es idempotente porque los handlers verifican el
+ | estado antes de actuar.
  */
 Artisan::command('appointments:reconcile', function (AppointmentRepository $appointments, AppointmentTransitions $transitions, ClockInterface $clock) {
     $now = $clock->now();
@@ -26,16 +27,13 @@ Artisan::command('appointments:reconcile', function (AppointmentRepository $appo
         ->filter(fn (string $id) => DB::transaction(fn () => $transitions->expireIfDue($id)));
     $unpaid = collect($appointments->idsWithOverduePayments($now))
         ->filter(fn (string $id) => DB::transaction(fn () => $transitions->cancelIfUnpaid($id)));
+    $attended = collect($appointments->idsWithEndedSessions($now))
+        ->filter(fn (string $id) => DB::transaction(fn () => $transitions->completeIfInProgress($id)));
+    $missed = collect($appointments->idsWithMissedSessions($now))
+        ->filter(fn (string $id) => DB::transaction(fn () => $transitions->markNoShowIfEnded($id)));
 
-    // Sin no-show automatico: la inasistencia la confirma recepcion.
-    $noShowCandidates = DB::table('appointments')
-        ->join('appointment_statuses', 'appointment_statuses.id', '=', 'appointments.status_id')
-        ->where('appointment_statuses.code', 'AGENDADA')
-        ->where('appointments.ends_at', '<', $now->format('Y-m-d H:i:s'))
-        ->count();
-
-    $this->info("Expiradas: {$expired->count()} · Canceladas por impago: {$unpaid->count()} · Posibles inasistencias por revisar: {$noShowCandidates}");
-})->purpose('Recupera expiraciones e impagos que los trabajos diferidos no procesaron');
+    $this->info("Expiradas: {$expired->count()} · Canceladas por impago: {$unpaid->count()} · Atendidas: {$attended->count()} · Inasistencias: {$missed->count()}");
+})->purpose('Aplica los plazos de la cita: expiraciones, impagos y sesiones terminadas');
 
 // HU-13: la prueba sin responder se marca vencida una sola vez y avisa con NT-17.
 Artisan::command('psych-tests:expire', function (PsychTestAssignmentRepository $assignments, PsychTestService $tests, ClockInterface $clock) {
@@ -50,7 +48,7 @@ Artisan::command('psych-tests:expire', function (PsychTestAssignmentRepository $
 Schedule::useCache('database');
 
 Schedule::command('appointments:reconcile')
-    ->everyFifteenMinutes()
+    ->everyFiveMinutes()
     ->withoutOverlapping()
     ->onOneServer();
 

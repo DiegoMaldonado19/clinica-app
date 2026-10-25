@@ -49,7 +49,10 @@ use App\Shared\Infrastructure\Persistence\Catalog;
 use App\Support\BusinessRuleSettings;
 use DateTimeZone;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Support\Facades\FilamentTimezone;
+use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
@@ -118,6 +121,12 @@ class AppServiceProvider extends ServiceProvider
 
         // UTC en la base; los paneles muestran y capturan en hora de Guatemala.
         FilamentTimezone::set(config('clinic.timezone'));
+
+        // Desplegables y calendarios con el estilo del panel, no los del navegador.
+        // DatePicker hereda la configuracion de DateTimePicker; el filtro necesita la suya.
+        Select::configureUsing(fn (Select $select) => $select->native(false));
+        SelectFilter::configureUsing(fn (SelectFilter $filter) => $filter->native(false));
+        DateTimePicker::configureUsing(fn (DateTimePicker $picker) => $picker->native(false));
 
         // Doc 05 §3.2: 12 caracteres y fuera de las filtraciones conocidas.
         Password::defaults(fn (): Password => Password::min(12)->uncompromised());

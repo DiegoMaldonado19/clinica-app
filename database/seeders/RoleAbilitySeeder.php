@@ -65,9 +65,10 @@ class RoleAbilitySeeder extends Seeder
         }
 
         // Se reescribe entera en vez de insertar lo que falte: asi revocar un
-        // permiso de la matriz tambien lo revoca en la base.
-        DB::transaction(function () use ($rows) {
-            DB::table('role_ability')->delete();
+        // permiso de la matriz tambien lo revoca en la base. Solo la de los roles
+        // sembrados: los creados desde el panel conservan los suyos (ADR-040).
+        DB::transaction(function () use ($rows, $roles) {
+            DB::table('role_ability')->whereIn('role_id', $roles->only(array_keys(self::MATRIX)))->delete();
             DB::table('role_ability')->insert($rows);
         });
     }

@@ -137,6 +137,7 @@ final class Appointment
 
     public function approve(string $approvedBy, int $paymentDeadlineHours, ClockInterface $clock): void
     {
+        $this->assertNotStarted($clock->now(), 'La cita ya empezó: no se puede aprobar.');
         $this->transition(AppointmentStatus::CONFIRMADA_PENDIENTE_PAGO, $approvedBy, null, $clock->now());
         $this->approvedBy = $approvedBy;
         $this->holdExpiresAt = null;
@@ -236,6 +237,7 @@ final class Appointment
             throw new DomainException('Esta cita no se puede cancelar en su estado actual.');
         }
 
+        $this->assertNotStarted($clock->now(), 'La cita ya empezó: no se puede cancelar ni reprogramar.');
         $outcome = $policy->evaluate($this->slot, $this->fee, $clock->now());
         $to = $outcome->feeApplies ? AppointmentStatus::CANCELADA_CON_RECARGO : AppointmentStatus::CANCELADA_SIN_CARGO;
 
@@ -267,6 +269,10 @@ final class Appointment
     /** Una cita en caja se cobra al llegar: pasa por AGENDADA antes de EN_CURSO. */
     public function checkIn(string $checkedInBy, ClockInterface $clock): void
     {
+        if ($clock->now() >= $this->slot->endsAt) {
+            throw new DomainException('La sesión ya terminó: no se puede registrar la llegada.');
+        }
+
         $paidAtDesk = $this->status === AppointmentStatus::PAGO_EN_CAJA;
 
         if ($paidAtDesk) {
@@ -277,8 +283,15 @@ final class Appointment
         $this->events[] = new AppointmentCheckedIn($this->id, $this->patientId, $clock->now(), $checkedInBy, $paidAtDesk);
     }
 
-    /** RF-30: 100 % de cargo y el horario no se libera. */
-    public function markNoShow(string $markedBy, ClockInterface $clock): CancellationOutcome
+    /** ADR-039: la sesion termino y nadie registro la llegada. */
+    public function wasMissed(DateTimeImmutable $now): bool
+    {
+        return in_array($this->status, [AppointmentStatus::AGENDADA, AppointmentStatus::PAGO_EN_CAJA], true)
+            && $this->slot->endsAt <= $now;
+    }
+
+    /** RF-30: 100 % de cargo y el horario no se libera. Sin `$markedBy`, lo marco el sistema. */
+    public function markNoShow(?string $markedBy, ClockInterface $clock): CancellationOutcome
     {
         if ($this->slot->startsAt > $clock->now()) {
             throw new DomainException('No se puede marcar inasistencia antes de la hora de la cita.');
@@ -334,6 +347,14 @@ final class Appointment
         [$transitions, $this->transitions] = [$this->transitions, []];
 
         return $transitions;
+    }
+
+    /** Lo que ya empezo se atiende o queda como inasistencia. */
+    private function assertNotStarted(DateTimeImmutable $now, string $message): void
+    {
+        if ($now >= $this->slot->startsAt) {
+            throw new DomainException($message);
+        }
     }
 
     private function transition(AppointmentStatus $to, ?string $by, ?string $reason, DateTimeImmutable $at): void

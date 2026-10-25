@@ -14,7 +14,7 @@
                 <strong>Quedan {{ intdiv($minutes, 60) }} h {{ $minutes % 60 }} min para registrar tu pago.</strong>
                 Después de ese tiempo el horario se libera.
             </p>
-            <p style="font-size: .875rem; opacity: .75;">Usa «Registrar mi pago» en la cita, o elige pagar en efectivo al llegar.</p>
+            <p style="font-size: .875rem; opacity: .75;">Usa «Registrar mi pago» en la cita. Para pagar en efectivo al llegar, abre su menú ⋮.</p>
         </x-filament::section>
     @endif
 

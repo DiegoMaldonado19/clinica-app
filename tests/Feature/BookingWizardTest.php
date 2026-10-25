@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use App\Livewire\BookingWizard;
+use App\Scheduling\Domain\Port\PatientRegistry;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
 
@@ -39,6 +42,24 @@ it('recorre A-01 a A-04 y deja la solicitud registrada (CA-01)', function () {
 
     expect(DB::table('appointments')->count())->toBe(1)
         ->and(DB::table('users')->where('email', 'ana@correo.test')->value('phone_e164'))->toBe('+50255551234');
+});
+
+it('muestra una tarjeta de error y registra el detalle si la solicitud falla sin aviso', function () {
+    Log::spy();
+    $this->mock(PatientRegistry::class, fn (MockInterface $mock) => $mock->shouldReceive('findOrRegister')->andThrow(new RuntimeException('Se cayó la base')));
+
+    wizardAtStep3()
+        ->set('name', 'Ana Pérez')
+        ->set('email', 'ana@correo.test')
+        ->set('phone', '5555-1234')
+        ->set('nit', 'CF')
+        ->set('accepted', true)
+        ->call('submit')
+        ->assertSet('step', 3)
+        ->assertSet('noticeTone', 'error')
+        ->assertSee('No pudimos enviar tu solicitud');
+
+    Log::shouldHaveReceived('error')->once();
 });
 
 it('exige aceptar la politica y valida NIT y telefono con los mensajes del catalogo', function () {

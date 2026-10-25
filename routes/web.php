@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\PaymentProofController;
 use App\Http\Middleware\EnforceTemporaryPassword;
@@ -21,6 +22,10 @@ Route::view('agendar', 'booking')->name('booking');
 Route::get('comprobantes/{proof}', PaymentProofController::class)
     ->middleware('auth')
     ->name('payment-proofs.show');
+
+Route::get('avatars/{user}', AvatarController::class)
+    ->middleware('auth')
+    ->name('avatar');
 
 // RN-15. Fuera del panel a proposito: el middleware que redirige aqui corre
 // dentro del panel y no puede mandar al usuario a una ruta que el mismo bloquea.

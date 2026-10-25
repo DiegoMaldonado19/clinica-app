@@ -22,4 +22,10 @@ interface AppointmentRepository
 
     /** @return list<string> */
     public function idsWithOverduePayments(DateTimeImmutable $now): array;
+
+    /** @return list<string> citas en curso cuya sesion ya termino */
+    public function idsWithEndedSessions(DateTimeImmutable $now): array;
+
+    /** @return list<string> citas sin llegada registrada cuya sesion ya termino */
+    public function idsWithMissedSessions(DateTimeImmutable $now): array;
 }

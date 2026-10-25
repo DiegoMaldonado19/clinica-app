@@ -9,14 +9,14 @@
                 Terapia individual, de pareja, familiar e infantil. Agenda tu cita en línea, sin llamadas.
             </p>
             <div class="mt-8 flex flex-wrap items-center gap-4">
-                <a href="{{ route('booking') }}" class="inline-flex min-h-12 items-center rounded-btn bg-primary px-6 font-medium text-white hover:bg-primary/90">Agendar una cita</a>
+                <x-ui.button :href="route('booking')">Agendar una cita</x-ui.button>
                 <a href="{{ route('booking') }}" class="inline-flex min-h-11 items-center font-medium text-primary hover:underline">Ver disponibilidad →</a>
             </div>
             <p class="mt-8 text-sm text-muted">Colegiada activa · Confidencialidad garantizada · Respuesta en {{ $policy->approvalSlaHours() }} h</p>
         </div>
-        <div class="flex aspect-[4/3] items-center justify-center rounded-card bg-sand text-muted" role="img" aria-label="Fotografía profesional">
-            Fotografía profesional
-        </div>
+        {{-- Se reemplaza el archivo, no el codigo: public/images/landing/psicologa.jpg, 4:3. --}}
+        <img src="{{ asset('images/landing/psicologa.jpg') }}" alt="Psic. Andrea Morales" width="1200" height="900" fetchpriority="high"
+            class="aspect-[4/3] w-full rounded-card object-cover shadow-card">
     </section>
 
     {{-- M1 · Perfil profesional (L-03) --}}
@@ -35,6 +35,18 @@
                     </div>
                 @endforeach
             </dl>
+        </div>
+    </section>
+
+    {{-- La clinica (F3-10): clinica-1.jpg a clinica-3.jpg en public/images/landing, 4:3. --}}
+    <section class="mx-auto max-w-[1200px] px-5 pt-14">
+        <h2 class="font-serif text-2xl font-semibold md:text-3xl">La clínica</h2>
+        <p class="mt-2 max-w-prose text-muted">Un espacio tranquilo y privado, pensado para que te sientas en confianza.</p>
+        <div class="mt-8 grid gap-5 sm:grid-cols-3">
+            @foreach (range(1, 3) as $photo)
+                <img src="{{ asset("images/landing/clinica-{$photo}.jpg") }}" alt="Instalaciones de la clínica, foto {{ $photo }} de 3" width="800" height="600" loading="lazy"
+                    class="aspect-[4/3] w-full rounded-card object-cover shadow-card">
+            @endforeach
         </div>
     </section>
 

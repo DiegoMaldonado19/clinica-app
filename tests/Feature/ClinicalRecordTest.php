@@ -51,6 +51,19 @@ it('sella la nota, cierra la cita y avisa sin contenido clinico (HU-11)', functi
         ->and($mail->getTextBody())->not->toContain('insomnio')->not->toContain('Ansiedad');
 });
 
+it('sella la nota aunque el sistema ya haya cerrado la sesion (ADR-039)', function () {
+    $this->travelTo(gtAt('2026-09-18 15:50'));
+    $this->artisan('appointments:reconcile')->assertSuccessful();
+
+    Livewire::actingAs($this->psychologist)
+        ->test(SessionNote::class, ['appointment' => $this->id])
+        ->fillForm(completeSoap())
+        ->callAction('seal')
+        ->assertSet('sealed', true);
+
+    expect(statusOf($this->id))->toBe('ATENDIDA');
+});
+
 it('guarda el SOAP cifrado en la base', function () {
     Livewire::actingAs($this->psychologist)
         ->test(SessionNote::class, ['appointment' => $this->id])

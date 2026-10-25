@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Portal\Pages;
 
+use App\Filament\Schemas\PersonFields;
 use App\Notifications\Infrastructure\NotificationDispatcher;
 use App\Notifications\Infrastructure\NotificationPreferences;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
@@ -19,6 +20,7 @@ class EditProfile extends BaseEditProfile
     public function form(Schema $schema): Schema
     {
         return $schema->components([
+            PersonFields::avatar(),
             $this->getNameFormComponent(),
             $this->getEmailFormComponent(),
             CheckboxList::make('channels')

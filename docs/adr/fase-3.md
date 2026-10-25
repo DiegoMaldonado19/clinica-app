@@ -22,6 +22,9 @@ en su título.
 | [036](#adr-036--una-plantilla-genérica-de-whatsapp) | Una plantilla genérica de WhatsApp | — |
 | [037](#adr-037--puertos-fel-y-pasarela-con-adaptador-nulo) | Puertos FEL y pasarela con adaptador nulo | — |
 | [038](#adr-038--el-asistente-se-activa-con-su-llave) | El asistente se activa con su llave | — |
+| [039](#adr-039--la-sesión-se-cierra-sola-al-terminar) | La sesión se cierra sola al terminar | Doc 09 §10 |
+| [040](#adr-040--roles-del-personal-creados-desde-el-panel) | Roles del personal creados desde el panel | Doc 05 §4.2 |
+| [041](#adr-041--fotos-de-perfil-servidas-por-la-aplicación) | Fotos de perfil servidas por la aplicación | — |
 
 Al final, [los puntos del doc 05 §7 que este diseño no cumple](#puntos-del-doc-05-7-que-no-se-cumplen).
 
@@ -201,6 +204,9 @@ USD 0.10 en Haiku 5.5.
 **Decisión.** El MFA nativo de Filament, obligatorio para el personal.
 - El código por correo es el método principal y su vigencia sale de RN-15. También hay aplicación
   TOTP y códigos de recuperación.
+- Quien tiene los dos activos parte de la aplicación, y el correo sale solo si lo elige (F3-10).
+  Antes iba primero el correo, y Filament lo enviaba al aceptar la contraseña aunque la persona
+  fuera a usar la aplicación.
 - Filament guarda el hash del código en la sesión y envía su propia notificación, en español.
 
 **Consecuencias.**
@@ -338,6 +344,95 @@ Sin llave, el widget muestra:
 **Descartado.**
 - Mostrar el chat y responder «no disponible» a cada mensaje: parece un error.
 - Una bandera aparte de la llave: serían dos valores que deben coincidir.
+
+---
+
+### ADR-039 · La sesión se cierra sola al terminar
+
+**Contexto.** El doc 09 §10 dejaba la inasistencia a recepción: «el sistema propone; recepción
+confirma», por el cargo del 100 %. En la práctica, las citas pasadas se quedaban en Agendada o En
+curso:
+- seguían ofreciendo reprogramar y cancelar;
+- el tablero contaba como atendida una sesión que nunca se cerró.
+
+El autor decidió el 25-oct que se cierren solas.
+
+**Decisión.**
+- `appointments:reconcile` corre cada 5 minutos:
+  - una cita En curso con la sesión terminada pasa a Atendida;
+  - una Agendada o en Pago en caja sin llegada registrada pasa a No Show, con el sistema como autor.
+- Pago en caja → No Show es la única transición nueva de la máquina de estados. No genera cobro
+  pendiente: no hubo pago.
+- Cada acción tiene su plazo, en el dominio y en la interfaz:
+  - aprobar, y cancelar o reprogramar a pedido del paciente, solo antes del inicio;
+  - cancelar o reprogramar por indisponibilidad de la psicóloga, también después: nunca le cuesta
+    al paciente (RN-18) y un bloqueo de agenda puede necesitarlo;
+  - registrar la llegada, hasta el fin de la sesión. El panel la ofrece solo el día de la cita.
+
+**Consecuencias.**
+- Si nadie registra la llegada, la cita queda No Show y no admite nota clínica. Registrar la llegada
+  a tiempo es parte del trabajo de recepción (MU-10).
+- Sellar la nota de una cita ya cerrada no falla: cerrar es idempotente.
+- Decide el reloj del servidor, sincronizado por NTP. El riesgo que señalaba el doc 09 queda en la
+  sesión que empieza tarde sin llegada registrada.
+
+**Descartado.**
+- Un margen después del fin: nadie lo pidió y retrasa el cierre. Si hace falta, entra como parámetro.
+- Un trabajo diferido por cita: el planificador ya corre y basta.
+- Reprogramar un No Show dentro de un plazo: perdonaría el cargo de RF-30.
+
+---
+
+### ADR-040 · Roles del personal creados desde el panel
+
+**Contexto.** El alta de usuarios pedía un «+» para crear roles. Había dos obstáculos:
+- el acceso a cada panel estaba fijo en código para tres roles (`User::PANEL_ROLES`), así que un rol
+  nuevo no entraba a ninguno;
+- los permisos viven en `role_ability`, pero `RoleAbilitySeeder` la reescribía entera en cada
+  despliegue.
+
+**Decisión.**
+- Paciente entra al portal. Cualquier otro rol entra al panel del personal, y ahí ve lo que sus
+  permisos dejan.
+- El «+» pide el nombre y los permisos (`abilities`) y guarda todo en una transacción, con la entrada
+  `role.created` en la bitácora.
+- `RoleAbilitySeeder` reescribe solo los permisos de los roles sembrados.
+- El alta de usuarios ya no ofrece el rol Paciente: los pacientes nacen en Pacientes, con su ficha.
+
+**Consecuencias.**
+- Un rol nuevo puede recibir permisos clínicos. Solo quien tiene `user.create.staff` (la
+  administradora) lo crea, y queda en la bitácora. Es una de las revisiones deliberadas del autor.
+- No hay pantalla para cambiar los permisos de un rol ya creado.
+- Los avisos internos al personal siguen yendo a Administradora y Recepción; un rol nuevo no los
+  recibe.
+
+**Descartado.**
+- Copiar un rol base: menos flexible, y el mismo cambio en el acceso.
+- Una columna `panel` por rol: con dos paneles, la regla basta.
+
+---
+
+### ADR-041 · Fotos de perfil servidas por la aplicación
+
+**Contexto.** Se pidió una foto opcional en el perfil y en el alta de usuarios y pacientes. Los
+archivos van a S3 privado, y en local a MinIO, cuyas URL prefirmadas apuntan a `minio:9000`: el
+navegador no las alcanza.
+
+**Decisión.**
+- `users.avatar_path` guarda la ruta, siempre bajo `avatars/`.
+- `GET /avatars/{user}` la sirve como `/comprobantes/{proof}`: la ven su dueño y el personal; los
+  demás reciben 404.
+- El campo acepta JPEG, PNG o WebP de hasta 2 MB, recortados a 500 px, con
+  `preventFilePathTampering()`. La foto reemplazada se borra del bucket.
+
+**Consecuencias.**
+- Un paciente nunca ve la foto de otro paciente.
+- Cada foto pasa por la aplicación; a 500 px, el costo es bajo.
+
+**Descartado.**
+- El disco `public` con `storage:link`: dejaría las fotos de pacientes en una URL pública y en el
+  disco de la EC2.
+- SVG: podría ejecutar código desde este dominio.
 
 ---
 

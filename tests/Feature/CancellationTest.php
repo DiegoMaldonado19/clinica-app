@@ -120,6 +120,31 @@ it('marca inasistencia con 100 % sin liberar el horario (CA-06)', function () {
         ->and(creditCents())->toBe(0);
 });
 
+it('cierra sola cada sesion terminada: atendida con llegada, inasistencia sin ella (ADR-039)', function () {
+    payAndBook($this->id, $this->staff->id);
+    $atDesk = requestAppointment('2026-09-18 16:00', 'otra@correo.test');
+    $this->transitions->approve($atDesk, $this->staff->id);
+    $this->transitions->payAtDesk($atDesk);
+    $attended = requestAppointment('2026-09-18 17:00', 'tercera@correo.test');
+    $this->transitions->approve($attended, $this->staff->id);
+    payAndBook($attended, $this->staff->id);
+    $this->travelTo(gtAt('2026-09-18 17:05'));
+    $this->transitions->checkIn($attended, $this->staff->id);
+
+    $this->travelTo(gtAt('2026-09-18 17:49'));
+    $this->artisan('appointments:reconcile')->assertSuccessful();
+
+    expect(statusOf($this->id))->toBe('NO_SHOW')
+        ->and(statusOf($atDesk))->toBe('NO_SHOW')
+        ->and(statusOf($attended))->toBe('EN_CURSO')
+        ->and(DB::table('appointment_status_log')->where('appointment_id', $this->id)->orderByDesc('occurred_at')->value('changed_by'))->toBeNull();
+
+    $this->travelTo(gtAt('2026-09-18 17:50'));
+    $this->artisan('appointments:reconcile')->assertSuccessful();
+
+    expect(statusOf($attended))->toBe('ATENDIDA');
+});
+
 it('no envia el recordatorio de una cita cancelada (HU-10)', function () {
     Queue::fake();
     $other = requestAppointment('2026-09-18 16:00', 'otra@correo.test');

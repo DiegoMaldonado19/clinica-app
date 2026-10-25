@@ -24,10 +24,7 @@
     @endif
 
     @if ($notice)
-        <div role="status" class="mb-6 flex gap-3 rounded-card border border-info/40 bg-info/10 p-4 text-sm">
-            <span aria-hidden="true" class="font-semibold text-info">i</span>
-            <p>{{ $notice }}</p>
-        </div>
+        <x-ui.notice :tone="$noticeTone" scroll class="mb-6" wire:key="notice-{{ md5($notice) }}">{{ $notice }}</x-ui.notice>
     @endif
 
     {{-- A-01 · Servicio --}}
@@ -102,9 +99,9 @@
             <h3 class="mt-6 text-sm font-medium">Los horarios más cercanos</h3>
             <div class="mt-2 flex flex-wrap gap-2">
                 @foreach ($this->nearest as $option)
-                    <button type="button" wire:click="chooseSlot({{ $option->startsAt->getTimestamp() }})" class="min-h-11 rounded-btn border border-primary bg-white px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white">
+                    <x-ui.button variant="outline" size="md" class="text-sm" wire:click="chooseSlot({{ $option->startsAt->getTimestamp() }})">
                         {{ \Illuminate\Support\Carbon::instance($option->startsAt)->tz($timezone)->locale('es')->translatedFormat('D j M · H:i') }}
-                    </button>
+                    </x-ui.button>
                 @endforeach
             </div>
         @elseif ($day)
@@ -113,9 +110,9 @@
             </h3>
             <div class="mt-3 flex flex-wrap gap-2">
                 @forelse ($this->times as $option)
-                    <button type="button" wire:click="chooseSlot({{ $option->startsAt->getTimestamp() }})" class="min-h-11 rounded-btn border border-primary bg-white px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white">
+                    <x-ui.button variant="outline" size="md" class="text-sm" wire:click="chooseSlot({{ $option->startsAt->getTimestamp() }})">
                         {{ \Illuminate\Support\Carbon::instance($option->startsAt)->tz($timezone)->format('H:i') }}
-                    </button>
+                    </x-ui.button>
                 @empty
                     <p class="text-sm text-muted">No quedan horarios este día. Prueba con otra fecha.</p>
                 @endforelse
@@ -136,16 +133,7 @@
                     ['phone', 'Teléfono', 'tel', '0000-0000', null],
                     ['nit', 'NIT (o CF)', 'text', 'CF', 'Si no tienes NIT, escribe CF'],
                 ] as [$field, $label, $type, $placeholder, $help])
-                    <div>
-                        <label for="{{ $field }}" class="block text-sm font-medium">{{ $label }}</label>
-                        <input id="{{ $field }}" type="{{ $type }}" wire:model="{{ $field }}" placeholder="{{ $placeholder }}"
-                            @class(['mt-1 h-12 w-full rounded-card border bg-white px-4', 'border-error' => $errors->has($field), 'border-line' => ! $errors->has($field)])>
-                        @error($field)
-                            <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                        @else
-                            @if ($help)<p class="mt-1 text-sm text-muted">{{ $help }}</p>@endif
-                        @enderror
-                    </div>
+                    <x-ui.input :name="$field" :label="$label" :help="$help" :type="$type" :placeholder="$placeholder" wire:model="{{ $field }}" />
                 @endforeach
             </fieldset>
 
@@ -178,7 +166,7 @@
 
                 <div class="flex items-center justify-between gap-3">
                     <button type="button" wire:click="back" class="min-h-11 text-sm text-muted hover:text-ink">← Cambiar horario</button>
-                    <button type="submit" wire:loading.attr="disabled" class="min-h-12 rounded-btn bg-primary px-6 font-medium text-white hover:bg-primary/90 disabled:opacity-60">Confirmar solicitud</button>
+                    <x-ui.button type="submit" wire:loading.attr="disabled">Confirmar solicitud</x-ui.button>
                 </div>
             </div>
         </form>
@@ -209,8 +197,8 @@
         <p class="mt-6 text-center text-sm text-muted">Enviamos una copia a {{ $email }}</p>
 
         <div class="mt-8 flex flex-wrap justify-center gap-3">
-            <a href="{{ url('/portal') }}" class="inline-flex min-h-12 items-center rounded-btn bg-primary px-6 font-medium text-white hover:bg-primary/90">Ir a mi portal</a>
-            <a href="{{ url('/') }}" class="inline-flex min-h-12 items-center rounded-btn border border-primary px-6 font-medium text-primary">Volver al inicio</a>
+            <x-ui.button :href="url('/portal')">Ir a mi portal</x-ui.button>
+            <x-ui.button :href="url('/')" variant="outline">Volver al inicio</x-ui.button>
         </div>
     @endif
 </div>

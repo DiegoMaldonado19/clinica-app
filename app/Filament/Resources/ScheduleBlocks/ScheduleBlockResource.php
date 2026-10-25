@@ -8,6 +8,7 @@ use App\Models\ScheduleBlock;
 use App\Scheduling\Infrastructure\Persistence\DatabaseAvailabilityProvider;
 use BackedEnum;
 use DateTimeZone;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
@@ -49,7 +50,9 @@ class ScheduleBlockResource extends Resource
                 TextColumn::make('reason')->label('Motivo'),
             ])
             ->recordActions([
-                DeleteAction::make()->label('Quitar bloqueo')->after(fn (ScheduleBlock $record) => self::forgetAvailability($record)),
+                ActionGroup::make([
+                    DeleteAction::make()->label('Quitar bloqueo')->after(fn (ScheduleBlock $record) => self::forgetAvailability($record)),
+                ]),
             ]);
     }
 

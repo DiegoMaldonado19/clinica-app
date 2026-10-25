@@ -12,12 +12,14 @@ use App\Models\AppointmentStatus;
 use App\Shared\Domain\ValueObject\Money;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -65,7 +67,8 @@ class AppointmentResource extends Resource
                 SelectFilter::make('status_id')->label('Estado')
                     ->options(fn (): array => AppointmentStatus::query()->pluck('label', 'id')->all()),
             ])
-            ->recordActions([ViewAction::make()]);
+            // Las transiciones tambien desde el listado, sin abrir la cita.
+            ->recordActions([ActionGroup::make([ViewAction::make(), ...self::stateActions()])->dropdownWidth(Width::ExtraSmall)]);
     }
 
     public static function infolist(Schema $schema): Schema

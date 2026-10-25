@@ -5,6 +5,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ? $title.' · ' : '' }}{{ config('clinic.name') }}</title>
+        <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -16,7 +17,7 @@
                     <a href="{{ url('/#servicios') }}" class="hidden min-h-11 items-center px-3 text-muted hover:text-ink md:inline-flex">Servicios</a>
                     <a href="{{ url('/#preguntas') }}" class="hidden min-h-11 items-center px-3 text-muted hover:text-ink md:inline-flex">Preguntas</a>
                     <a href="{{ url('/portal') }}" class="inline-flex min-h-11 items-center px-3 text-muted hover:text-ink">Mi portal</a>
-                    <a href="{{ route('booking') }}" class="inline-flex min-h-11 items-center rounded-btn bg-primary px-4 font-medium text-white hover:bg-primary/90">Agendar una cita</a>
+                    <x-ui.button :href="route('booking')" size="md">Agendar una cita</x-ui.button>
                 </div>
             </nav>
         </header>

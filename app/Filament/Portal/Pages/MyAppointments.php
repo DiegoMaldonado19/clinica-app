@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Portal\Pages;
 
 use App\Billing\Application\BillingService;
-use App\Billing\Domain\DuplicateReceipt;
 use App\Billing\Domain\PaymentProof;
 use App\Billing\Domain\Port\PaymentGateway;
 use App\Filament\Actions\AppointmentActions;
+use App\Filament\Support\DomainCommand;
 use App\Filament\Support\StatusBadge;
 use App\Models\Appointment;
 use App\Models\Bank;
@@ -17,8 +17,8 @@ use App\Shared\Domain\ValueObject\Money;
 use App\Shared\Infrastructure\Audit\AuditLog;
 use App\Support\PolicyText;
 use BackedEnum;
-use DomainException;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -87,48 +87,51 @@ class MyAppointments extends Page implements HasTable
                     ->icon(fn (Appointment $record): Heroicon => StatusBadge::icon($record->statusCode())),
                 TextColumn::make('fee_amount_cents')->label('Monto')->formatStateUsing(fn (int $state): string => Money::gtq($state)->format()),
             ])
+            // El pago queda a la vista: es lo que la cuenta regresiva pide hacer.
             ->recordActions([
                 $this->submitProofAction(),
-                // Solo con una pasarela configurada; hoy el adaptador nulo la oculta.
-                Action::make('payOnline')
-                    ->label('Pagar con tarjeta')
-                    ->color('gray')
-                    ->visible(fn (Appointment $record): bool => $record->statusCode() === 'CONFIRMADA_PENDIENTE_PAGO' && app(PaymentGateway::class)->isAvailable())
-                    ->action(function (Appointment $record): void {
-                        $payment = $record->sessionPayment();
-                        $this->redirect(app(PaymentGateway::class)->checkoutUrl($payment->id, Money::gtq($payment->amount_cents)));
-                    }),
-                Action::make('payAtDesk')
-                    ->label('Pagar en efectivo al llegar')
-                    ->color('gray')
-                    ->requiresConfirmation()
-                    ->visible(fn (Appointment $record): bool => $record->statusCode() === 'CONFIRMADA_PENDIENTE_PAGO')
-                    ->action(fn (Appointment $record) => AppointmentActions::run(
-                        fn (AppointmentTransitions $t) => $t->payAtDesk($this->ownedId($record)),
-                        'Perfecto. Recuerda llegar al menos 15 minutos antes para realizar el pago en recepción.',
-                    )),
-                Action::make('reschedule')
-                    ->label('Reprogramar')
-                    ->color('gray')
-                    ->modalHeading('Reprogramar mi cita')
-                    ->modalDescription(fn (Appointment $record): string => 'Reprogramar cancela tu cita actual y aparta la nueva. '.AppointmentActions::cancellationPreview($record))
-                    ->visible(fn (Appointment $record): bool => $record->isCancellable() && (bool) auth()->user()?->hasAbility('appointment.cancel.own'))
-                    ->schema(fn (Appointment $record): array => AppointmentActions::rescheduleFields($record, assisted: false))
-                    ->action(fn (Appointment $record, array $data) => AppointmentActions::rescheduleTo(
-                        $this->ownedId($record), $data, byTherapist: false, assisted: false,
-                        success: 'Tu cita quedó reprogramada. Te enviamos el detalle por correo.',
-                    )),
-                Action::make('cancel')
-                    ->label('Cancelar')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalDescription(fn (Appointment $record): string => AppointmentActions::cancellationPreview($record))
-                    ->visible(fn (Appointment $record): bool => in_array($record->statusCode(), ['CONFIRMADA_PENDIENTE_PAGO', 'PAGO_EN_CAJA', 'AGENDADA'], true)
-                        && (bool) auth()->user()?->hasAbility('appointment.cancel.own'))
-                    ->action(fn (Appointment $record) => AppointmentActions::run(function (AppointmentTransitions $t) use ($record) {
-                        $outcome = $t->cancel($this->ownedId($record), (string) auth()->id());
-                        AuditLog::record('appointment.cancelled', 'appointment', $record->id, ['fee_percentage' => $outcome->feePercentage]);
-                    }, 'Tu cita fue cancelada. Te enviamos el detalle por correo.')),
+                ActionGroup::make([
+                    // Solo con una pasarela configurada; hoy el adaptador nulo la oculta.
+                    Action::make('payOnline')
+                        ->label('Pagar con tarjeta')
+                        ->icon(Heroicon::OutlinedCreditCard)
+                        ->visible(fn (Appointment $record): bool => $record->statusCode() === 'CONFIRMADA_PENDIENTE_PAGO' && app(PaymentGateway::class)->isAvailable())
+                        ->action(function (Appointment $record): void {
+                            $payment = $record->sessionPayment();
+                            $this->redirect(app(PaymentGateway::class)->checkoutUrl($payment->id, Money::gtq($payment->amount_cents)));
+                        }),
+                    Action::make('payAtDesk')
+                        ->label('Pagar en efectivo al llegar')
+                        ->icon(Heroicon::OutlinedBanknotes)
+                        ->requiresConfirmation()
+                        ->visible(fn (Appointment $record): bool => $record->statusCode() === 'CONFIRMADA_PENDIENTE_PAGO')
+                        ->action(fn (Appointment $record) => AppointmentActions::run(
+                            fn (AppointmentTransitions $t) => $t->payAtDesk($this->ownedId($record)),
+                            'Perfecto. Recuerda llegar al menos 15 minutos antes para realizar el pago en recepción.',
+                        )),
+                    Action::make('reschedule')
+                        ->label('Reprogramar')
+                        ->icon(Heroicon::OutlinedArrowPath)
+                        ->modalHeading('Reprogramar mi cita')
+                        ->modalDescription(fn (Appointment $record): string => 'Reprogramar cancela tu cita actual y aparta la nueva. '.AppointmentActions::cancellationPreview($record))
+                        ->visible(fn (Appointment $record): bool => $record->canBeCancelledByPatient() && (bool) auth()->user()?->hasAbility('appointment.cancel.own'))
+                        ->schema(fn (Appointment $record): array => AppointmentActions::rescheduleFields($record, assisted: false))
+                        ->action(fn (Appointment $record, array $data) => AppointmentActions::rescheduleTo(
+                            $this->ownedId($record), $data, byTherapist: false, assisted: false,
+                            success: 'Tu cita quedó reprogramada. Te enviamos el detalle por correo.',
+                        )),
+                    Action::make('cancel')
+                        ->label('Cancelar')
+                        ->icon(Heroicon::OutlinedXCircle)
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription(fn (Appointment $record): string => AppointmentActions::cancellationPreview($record))
+                        ->visible(fn (Appointment $record): bool => $record->canBeCancelledByPatient() && (bool) auth()->user()?->hasAbility('appointment.cancel.own'))
+                        ->action(fn (Appointment $record) => AppointmentActions::run(function (AppointmentTransitions $t) use ($record) {
+                            $outcome = $t->cancel($this->ownedId($record), (string) auth()->id());
+                            AuditLog::record('appointment.cancelled', 'appointment', $record->id, ['fee_percentage' => $outcome->feePercentage]);
+                        }, 'Tu cita fue cancelada. Te enviamos el detalle por correo.')),
+                ]),
             ])
             ->emptyStateHeading('Todavía no tienes citas')
             ->emptyStateDescription('Puedes agendar desde la página de inicio.');
@@ -183,28 +186,23 @@ class MyAppointments extends Page implements HasTable
 
         $path = 'comprobantes/'.Str::uuid7().'.pdf';
 
-        try {
-            DB::transaction(function () use ($appointmentId, $data, $file, $path) {
-                Storage::disk('s3')->putFileAs('comprobantes', $file, basename($path));
+        $saved = DomainCommand::run(function () use ($appointmentId, $data, $file, $path) {
+            Storage::disk('s3')->putFileAs('comprobantes', $file, basename($path));
 
-                app(BillingService::class)->submitProof($appointmentId, new PaymentProof(
-                    trim((string) $data['receipt_number']),
-                    (int) $data['bank_id'],
-                    (string) $data['account_last_digits'],
-                    new \DateTimeImmutable((string) $data['deposited_on']),
-                    $path,
-                    (string) hash_file('sha256', $file->getRealPath()),
-                    (int) $file->getSize(),
-                ));
-            });
-        } catch (DuplicateReceipt|DomainException $exception) {
+            app(BillingService::class)->submitProof($appointmentId, new PaymentProof(
+                trim((string) $data['receipt_number']),
+                (int) $data['bank_id'],
+                (string) $data['account_last_digits'],
+                new \DateTimeImmutable((string) $data['deposited_on']),
+                $path,
+                (string) hash_file('sha256', $file->getRealPath()),
+                (int) $file->getSize(),
+            ));
+        }, 'Recibimos tu comprobante. Lo revisaremos y te avisaremos apenas quede confirmado.');
+
+        if (! $saved) {
             Storage::disk('s3')->delete($path);
-            Notification::make()->danger()->title($exception->getMessage())->send();
-
-            return;
         }
-
-        Notification::make()->success()->title('Recibimos tu comprobante. Lo revisaremos y te avisaremos apenas quede confirmado.')->send();
     }
 
     /** @return Builder<Appointment> */

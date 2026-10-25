@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property string $code
  * @property string $label
  */
+#[Fillable(['code', 'label'])]
 class Role extends Model {}

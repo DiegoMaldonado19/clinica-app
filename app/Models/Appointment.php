@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $patient_id
  * @property Carbon $starts_at
+ * @property Carbon $ends_at
  * @property Carbon|null $hold_expires_at
  * @property Carbon|null $payment_due_at
  * @property string $service_id
@@ -76,6 +77,12 @@ class Appointment extends Model
     public function isCancellable(): bool
     {
         return DomainStatus::from($this->statusCode())->isCancellable();
+    }
+
+    /** A pedido del paciente, solo antes del inicio (ADR-039). Por indisponibilidad basta `isCancellable()`. */
+    public function canBeCancelledByPatient(): bool
+    {
+        return $this->isCancellable() && $this->starts_at->isFuture();
     }
 
     /** El cobro de la sesion; despues del credito a favor puede ser menor que la tarifa (RN-16). */

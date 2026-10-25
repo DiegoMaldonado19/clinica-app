@@ -5,23 +5,10 @@
 
         <form method="POST" action="{{ route('password.change.update') }}" class="mt-8 space-y-5 rounded-card border border-line bg-white p-6 shadow-card">
             @csrf
-            <div>
-                <label for="password" class="block text-sm font-medium">Nueva contraseña</label>
-                <input id="password" name="password" type="password" required autocomplete="new-password" aria-describedby="password-rule"
-                    @class(['mt-1 h-12 w-full rounded-card border bg-white px-4', 'border-error' => $errors->has('password'), 'border-line' => ! $errors->has('password')])>
-                <p id="password-rule" class="mt-1 text-sm text-muted">Mínimo {{ $minLength }} caracteres.</p>
-                @error('password')
-                    <p class="mt-1 text-sm text-error">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-ui.input name="password" label="Nueva contraseña" type="password" required autocomplete="new-password" :help="'Mínimo '.$minLength.' caracteres.'" />
+            <x-ui.input name="password_confirmation" label="Confirma la contraseña" type="password" required autocomplete="new-password" />
 
-            <div>
-                <label for="password_confirmation" class="block text-sm font-medium">Confirma la contraseña</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password"
-                    class="mt-1 h-12 w-full rounded-card border border-line bg-white px-4">
-            </div>
-
-            <button type="submit" class="min-h-12 w-full rounded-btn bg-primary px-6 font-medium text-white hover:bg-primary/90">Guardar y continuar</button>
+            <x-ui.button type="submit" class="w-full">Guardar y continuar</x-ui.button>
         </form>
     </div>
 </x-layouts.public>

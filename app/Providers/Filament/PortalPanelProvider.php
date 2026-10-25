@@ -14,8 +14,10 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -39,11 +41,17 @@ class PortalPanelProvider extends PanelProvider
             ->tap(AdminPanelProvider::theme(...))
             ->login(Login::class)
             ->passwordReset(RequestPasswordReset::class)
-            ->profile(EditProfile::class)
+            ->profile(EditProfile::class, isSimple: false)
             ->emailChangeVerification()
             ->multiFactorAuthentication(AdminPanelProvider::secondFactors())
             ->topNavigation()
             ->pages([MyAppointments::class, MyTests::class])
+            ->navigationItems([
+                NavigationItem::make('Agendar una cita')
+                    ->url(fn (): string => route('booking'))
+                    ->icon(Heroicon::OutlinedPlusCircle)
+                    ->sort(3),
+            ])
             ->homeUrl(fn (): string => MyAppointments::getUrl())
             // El mismo mensaje de error para todos no revela quien es personal;
             // este enlace evita la confusion sin revelarlo.

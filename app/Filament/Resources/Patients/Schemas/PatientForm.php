@@ -3,11 +3,6 @@
 namespace App\Filament\Resources\Patients\Schemas;
 
 use App\Filament\Schemas\PersonFields;
-use App\Filament\Support\DomainCommand;
-use App\Identity\Infrastructure\DatabasePatientRegistry;
-use App\Models\Patient;
-use App\Models\User;
-use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -22,27 +17,19 @@ class PatientForm
     {
         return $schema
             ->components([
-                // La ficha extiende una cuenta: es la relacion 1-0..1 del ERD. Si
-                // la cuenta no existe, se crea aqui mismo con su acceso al portal.
+                // La ficha extiende una cuenta: es la relacion 1-0..1 del ERD. En el
+                // alta, la cuenta se crea aqui mismo, con su acceso al portal (NT-02).
+                Section::make('Cuenta del portal')
+                    ->description('Recibirá por correo su contraseña temporal para entrar al portal.')
+                    ->visibleOn('create')
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->schema([PersonFields::avatar(), ...PersonFields::make()]),
                 Select::make('id')
                     ->label('Cuenta')
-                    ->options(fn (?Patient $record): array => User::query()
-                        ->whereRelation('role', 'code', 'patient')
-                        ->when(
-                            $record === null,
-                            fn ($query) => $query->whereNotIn('id', Patient::query()->select('id')),
-                        )
-                        ->pluck('name', 'id')
-                        ->all())
-                    ->searchable()
-                    ->required()
-                    ->disabledOn('edit')
-                    ->createOptionForm(PersonFields::make())
-                    ->createOptionModalHeading('Nueva cuenta de paciente')
-                    ->createOptionUsing(fn (array $data): string => DB::transaction(
-                        fn (): string => app(DatabasePatientRegistry::class)->registerAccount($data['name'], $data['email'], $data['phone_e164'] ?? null),
-                    ))
-                    ->createOptionAction(fn (Action $action): Action => $action->visible(DomainCommand::userCan('patient.create'))),
+                    ->relationship('user', 'name')
+                    ->disabled()
+                    ->visibleOn('edit'),
                 Select::make('document_type_id')
                     ->label('Tipo de documento')
                     ->options(fn (): array => self::catalog('document_types')),

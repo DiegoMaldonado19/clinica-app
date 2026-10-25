@@ -101,6 +101,28 @@ it('da a recepcion reprogramar a pedido del paciente y solo a la psicologa por i
     expect(statusOf($this->id))->toBe('CANCELADA_SIN_CARGO');
 });
 
+it('ofrece cada accion solo en su plazo (ADR-039)', function () {
+    $this->patient->forceFill(['must_change_password' => false])->save();
+    $view = fn () => Livewire::actingAs($this->admin)->test(ViewAppointment::class, ['record' => $this->id]);
+
+    $this->travelTo(gtAt('2026-09-17 10:00'));
+    $view()->assertActionHidden('checkIn')->assertActionVisible('reschedule')->assertActionVisible('cancel');
+
+    // Ya empezo: el paciente no cancela ni reprograma; la psicologa si, sin cargo (RN-18).
+    $this->travelTo(gtAt('2026-09-18 15:05'));
+    $view()->assertActionVisible('checkIn')
+        ->assertActionHidden('reschedule')
+        ->assertActionHidden('cancel')
+        ->assertActionVisible('cancelByTherapist')
+        ->assertActionVisible('rescheduleByTherapist');
+    Livewire::actingAs($this->patient)->test(MyAppointments::class)
+        ->assertTableActionHidden('reschedule', $this->id)
+        ->assertTableActionHidden('cancel', $this->id);
+
+    $this->travelTo(gtAt('2026-09-18 15:50'));
+    $view()->assertActionHidden('checkIn')->assertActionVisible('markNoShow');
+});
+
 it('aplica el credito a la siguiente cita aprobada y lo devuelve si esa se cancela por impago', function () {
     $this->travelTo(gtAt('2026-09-18 09:00'));
     app(AppointmentTransitions::class)->cancel($this->id, null);

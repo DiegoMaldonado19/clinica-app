@@ -137,6 +137,19 @@ final readonly class DatabaseAppointmentRepository implements AppointmentReposit
         );
     }
 
+    public function idsWithEndedSessions(DateTimeImmutable $now): array
+    {
+        return $this->idsWhere(AppointmentStatus::EN_CURSO, 'ends_at', $now);
+    }
+
+    public function idsWithMissedSessions(DateTimeImmutable $now): array
+    {
+        return array_merge(
+            $this->idsWhere(AppointmentStatus::AGENDADA, 'ends_at', $now),
+            $this->idsWhere(AppointmentStatus::PAGO_EN_CAJA, 'ends_at', $now),
+        );
+    }
+
     /** @return list<string> */
     private function idsWhere(AppointmentStatus $status, string $column, DateTimeImmutable $now): array
     {

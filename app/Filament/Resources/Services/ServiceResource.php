@@ -8,6 +8,7 @@ use App\Filament\Resources\Services\Pages\ListServices;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -84,7 +85,7 @@ class ServiceResource extends Resource
                     ->state(fn (Service $record): string => $record->currentPrice()?->format() ?? '—'),
                 IconColumn::make('is_active')->label('Activo')->boolean(),
             ])
-            ->recordActions([EditAction::make()]);
+            ->recordActions([ActionGroup::make([EditAction::make()])]);
     }
 
     public static function getPages(): array

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Analytics\Domain\Kpi;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\KpiOverview;
+use App\Filament\Widgets\OccupancyByWeekdayChart;
 use App\Filament\Widgets\RevenueByServiceChart;
 use App\Models\User;
 use App\Scheduling\Application\AppointmentTransitions;
@@ -91,6 +92,13 @@ it('exporta el PDF del reporte como application/pdf', function () {
 
     expect(base64_decode($download['content']))->toStartWith('%PDF-');
 });
+
+// F3-10: sin cache ni sondeo cada 5 s; cada reporte vuelve a consultar la base con su icono.
+it('trae en cada reporte del tablero su icono de recarga y no se refresca solo', function (string $widget) {
+    Livewire::actingAs($this->admin)->test($widget, ['pageFilters' => ['period' => 'month']])
+        ->assertSeeHtml('wire:click="$refresh"')
+        ->assertDontSeeHtml('wire:poll');
+})->with([KpiOverview::class, RevenueByServiceChart::class, OccupancyByWeekdayChart::class]);
 
 it('muestra a recepcion los indicadores operativos sin ninguna cifra de ingresos (HU-16)', function () {
     $this->actingAs($this->secretary)->get(Dashboard::getUrl())->assertSuccessful();

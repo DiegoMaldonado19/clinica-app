@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Scheduling\Application;
 
 use App\Scheduling\Domain\Model\Appointment;
+use App\Scheduling\Domain\Model\AppointmentStatus;
 use App\Scheduling\Domain\Policy\CancellationOutcome;
 use App\Scheduling\Domain\Port\AppointmentRepository;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -115,9 +116,32 @@ final readonly class AppointmentTransitions
         $this->apply($id, fn (Appointment $a) => $a->rejectPayment($this->clock));
     }
 
-    public function complete(string $id): void
+    /** Idempotente: la nota sellada y el fin de la sesion llegan en cualquier orden. */
+    public function completeIfInProgress(string $id): bool
     {
-        $this->apply($id, fn (Appointment $a) => $a->complete($this->clock));
+        $appointment = $this->appointments->find($id);
+
+        if ($appointment === null || $appointment->status() !== AppointmentStatus::EN_CURSO) {
+            return false;
+        }
+
+        $this->apply($id, fn (Appointment $a) => $a->complete($this->clock), $appointment);
+
+        return true;
+    }
+
+    /** Idempotente: sin llegada al terminar la sesion, el sistema marca la inasistencia (ADR-039). */
+    public function markNoShowIfEnded(string $id): bool
+    {
+        $appointment = $this->appointments->find($id);
+
+        if ($appointment === null || ! $appointment->wasMissed($this->clock->now())) {
+            return false;
+        }
+
+        $this->apply($id, fn (Appointment $a) => $a->markNoShow(null, $this->clock), $appointment);
+
+        return true;
     }
 
     /**
