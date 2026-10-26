@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\AuditLogEntry;
+use App\Shared\Infrastructure\Audit\AuditLog;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -28,4 +30,24 @@ it('no vuelve a sembrar servicios ni horario en una base que ya tiene la clinica
 
     expect(DB::table('services')->count())->toBe(4)
         ->and(DB::table('availability_rules')->where('weekday', 6)->exists())->toBeFalse();
+});
+
+// Las bases sembradas antes de `clinic.therapist` conservan el nombre de muestra.
+it('reemplaza el nombre de muestra de la psicologa, tambien en la bitacora', function () {
+    $this->seed(DatabaseSeeder::class);
+    DB::table('users')->where('id', therapistId())->update(['name' => 'Psic. Andrea Morales']);
+    AuditLog::record('login.succeeded', 'user', therapistId(), actorId: therapistId());
+
+    (require database_path('migrations/2026_10_26_100000_replace_sample_therapist_name.php'))->up();
+
+    expect(AuditLogEntry::with('actor')->sole()->actor->name)->toBe(config('clinic.therapist'));
+});
+
+it('no toca el nombre que la psicologa puso en su perfil', function () {
+    $this->seed(DatabaseSeeder::class);
+    DB::table('users')->where('id', therapistId())->update(['name' => 'Karin Monterroso']);
+
+    (require database_path('migrations/2026_10_26_100000_replace_sample_therapist_name.php'))->up();
+
+    expect(DB::table('users')->where('id', therapistId())->value('name'))->toBe('Karin Monterroso');
 });
