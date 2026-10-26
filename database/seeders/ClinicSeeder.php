@@ -61,7 +61,7 @@ class ClinicSeeder extends Seeder
         // con la cuenta demo en local.
         $therapistId = $this->idOrInsert('users', ['email' => config('clinic.admin_email')], [
             'role_id' => DB::table('roles')->where('code', 'admin')->value('id'),
-            'name' => 'Psic. Andrea Morales',
+            'name' => config('clinic.therapist'),
             'password' => Hash::make(Str::random(40)),
             'is_active' => true,
         ]);

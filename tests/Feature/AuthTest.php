@@ -104,7 +104,7 @@ it('muestra el cambio de contrasena con el diseno de la landing y su regla de lo
 
     $this->actingAs($user)->get(route('password.change'))
         ->assertSuccessful()
-        ->assertSee('Psic. Andrea Morales')
+        ->assertSee(asset('images/logo.png'))
         ->assertSee('Mínimo 12 caracteres');
 });
 

@@ -53,10 +53,10 @@ class AdminPanelProvider extends PanelProvider
             ->font('Inter', provider: LocalFontProvider::class)
             ->serifFont('Lora', provider: LocalFontProvider::class)
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): Htmlable => Vite::fonts())
-            ->brandName('Psic. Andrea Morales')
-            ->brandLogo(asset('images/logo.svg'))
+            ->brandName(config('clinic.name'))
+            ->brandLogo(asset('images/logo.png'))
             ->brandLogoHeight('2.5rem')
-            ->favicon(asset('images/favicon.svg'))
+            ->favicon(asset('images/favicon.png'))
             // Lo inesperado: el detalle va a la bitacora de Laravel y la persona ve una tarjeta.
             ->registerErrorNotification(
                 'No pudimos completar la acción',

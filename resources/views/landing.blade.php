@@ -3,10 +3,10 @@
     <section class="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:grid-cols-2 md:items-center md:py-20">
         <div>
             <h1 class="font-serif text-[28px] leading-tight font-semibold md:text-[40px]">
-                Acompañamiento psicológico profesional en Ciudad de Guatemala
+                Un espacio seguro para explorar, comprender y transformar tu mundo interior
             </h1>
             <p class="mt-5 max-w-prose text-lg text-muted">
-                Terapia individual, de pareja, familiar e infantil. Agenda tu cita en línea, sin llamadas.
+                Acompañamiento psicológico profesional en Quetzaltenango. Terapia individual, de pareja, familiar e infantil. Agenda tu cita en línea, sin llamadas.
             </p>
             <div class="mt-8 flex flex-wrap items-center gap-4">
                 <x-ui.button :href="route('booking')">Agendar una cita</x-ui.button>
@@ -15,7 +15,7 @@
             <p class="mt-8 text-sm text-muted">Colegiada activa · Confidencialidad garantizada · Respuesta en {{ $policy->approvalSlaHours() }} h</p>
         </div>
         {{-- Se reemplaza el archivo, no el codigo: public/images/landing/psicologa.jpg, 4:3. --}}
-        <img src="{{ asset('images/landing/psicologa.jpg') }}" alt="Psic. Andrea Morales" width="1200" height="900" fetchpriority="high"
+        <img src="{{ asset('images/landing/psicologa.jpg') }}" alt="{{ config('clinic.therapist') }} en su consultorio" width="768" height="576" fetchpriority="high"
             class="aspect-[4/3] w-full rounded-card object-cover shadow-card">
     </section>
 
@@ -23,8 +23,8 @@
     <section class="bg-sand/50">
         <div class="mx-auto grid max-w-[1200px] gap-8 px-5 py-14 md:grid-cols-3">
             <div class="md:col-span-1">
-                <h2 class="font-serif text-2xl font-semibold">Psic. Andrea Morales</h2>
-                <p class="mt-2 text-muted">Psicóloga clínica · Colegiado No. 0000</p>
+                <h2 class="font-serif text-2xl font-semibold">{{ config('clinic.therapist') }}</h2>
+                <p class="mt-2 text-muted">Psicóloga clínica · Colegiado activo No. 3511</p>
                 <p class="text-sm text-muted">Colegio de Psicólogos de Guatemala</p>
             </div>
             <dl class="grid grid-cols-3 gap-4 md:col-span-2">
@@ -38,14 +38,14 @@
         </div>
     </section>
 
-    {{-- La clinica (F3-10): clinica-1.jpg a clinica-3.jpg en public/images/landing, 4:3. --}}
+    {{-- La clinica (F3-10): clinica-1.jpg a clinica-3.jpg en public/images/landing, cuadradas. --}}
     <section class="mx-auto max-w-[1200px] px-5 pt-14">
         <h2 class="font-serif text-2xl font-semibold md:text-3xl">La clínica</h2>
         <p class="mt-2 max-w-prose text-muted">Un espacio tranquilo y privado, pensado para que te sientas en confianza.</p>
         <div class="mt-8 grid gap-5 sm:grid-cols-3">
             @foreach (range(1, 3) as $photo)
-                <img src="{{ asset("images/landing/clinica-{$photo}.jpg") }}" alt="Instalaciones de la clínica, foto {{ $photo }} de 3" width="800" height="600" loading="lazy"
-                    class="aspect-[4/3] w-full rounded-card object-cover shadow-card">
+                <img src="{{ asset("images/landing/clinica-{$photo}.jpg") }}" alt="Instalaciones de la clínica, foto {{ $photo }} de 3" width="800" height="800" loading="lazy"
+                    class="aspect-square w-full rounded-card object-cover shadow-card">
             @endforeach
         </div>
     </section>
