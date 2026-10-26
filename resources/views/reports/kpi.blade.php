@@ -18,7 +18,7 @@
     </style>
 </head>
 <body>
-    <p class="brand">Psic. Andrea Morales</p>
+    <p class="brand">{{ config('clinic.name') }}</p>
     <h1>{{ $title }}</h1>
     <p class="muted">Generado el {{ now(config('clinic.timezone'))->locale('es')->translatedFormat('j \d\e F \d\e Y, H:i') }}</p>
 

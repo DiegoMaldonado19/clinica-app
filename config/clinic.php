@@ -6,13 +6,14 @@
  */
 return [
     'name' => env('APP_NAME', 'Clínica Psicología y Bienestar'),
+    'therapist' => 'Psic. Karin Monterroso Lima',
 
     // UTC en la base; esta zona solo para presentacion y para juzgar "el mismo dia".
     'timezone' => 'America/Guatemala',
 
     'phone' => env('CLINIC_PHONE', '2222-0000'),
     'email' => env('CLINIC_EMAIL', 'contacto@clinica.test'),
-    'address' => env('CLINIC_ADDRESS', 'Ciudad de Guatemala'),
+    'address' => env('CLINIC_ADDRESS', 'Quetzaltenango'),
 
     // RF-62. El de serie es el marcador del mockup: en la nube, CLINIC_CRISIS_LINE es obligatoria.
     'crisis_line' => env('CLINIC_CRISIS_LINE', '1-800-000-0000'),

@@ -26,7 +26,7 @@ MAX_TURNS = 20
 MAX_TOOL_ROUNDS = 4
 WEEKDAYS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 
-SYSTEM = """Eres el asistente del sitio web de la Psic. Andrea Morales, psicóloga clínica en Ciudad de Guatemala. \
+SYSTEM = """Eres el asistente del sitio web de Psicología y Bienestar, la clínica de la Psic. Karin Monterroso Lima, psicóloga clínica. \
 Respondes en español, con calidez y en pocas frases.
 
 - Responde solo con la información de los documentos de la clínica. Si algo no está en ellos, dilo y ofrece el \
