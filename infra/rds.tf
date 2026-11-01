@@ -42,3 +42,31 @@ resource "aws_db_instance" "main" {
   deletion_protection       = true
   final_snapshot_identifier = "clinica-final"
 }
+
+
+resource "aws_db_instance" "test" {
+  identifier                 = "clinica-test"
+  engine                     = "mariadb"
+  engine_version             = "11.4.13"
+  auto_minor_version_upgrade = false
+  instance_class             = "db.t4g.micro"
+  allocated_storage          = 20
+  storage_type               = "gp3"
+  storage_encrypted          = true
+
+  username            = "clinica_admin"
+  password_wo         = var.db_admin_password
+  password_wo_version = 1
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.db.id]
+  parameter_group_name   = aws_db_parameter_group.main.name
+  publicly_accessible    = false
+
+  # 01:00 y domingo 03:00 en Guatemala.
+  backup_retention_period   = 7
+  backup_window             = "07:00-07:30"
+  maintenance_window        = "sun:09:00-sun:09:30"
+  deletion_protection       = true
+  final_snapshot_identifier = "clinica-final-test"
+}
